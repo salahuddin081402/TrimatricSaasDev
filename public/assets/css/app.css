@@ -1,0 +1,147 @@
+.bg-brand-primary {
+    background-color: rgb(18, 153, 232) !important;
+}
+.logo {
+    width: 80%;
+    height: auto;
+}
+.btn-login {
+    background: none;
+    border: 1px solid #fff;
+    border-radius: 5px;
+    color: #fff;
+    padding: 7px 30px;
+}
+.navbar .search-input {
+    padding: 10px 20px;
+}
+
+.top-nav {
+    border-bottom: 1px solid #ccc;
+}
+
+.feature-img {
+    max-width: 50px;
+}
+
+.feature-1, .feature-2, .feature-3 {
+    border-right: 1px solid #ccc;
+}
+.category-slider {
+    position: relative;
+}
+.category-slider img {
+    width: 75%;
+}
+.category-slider-item {
+    display: flex !important;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+.category-slider .slick-prev {
+    position: absolute;
+    top: 50%;
+    left: -40px;
+    transform: translateY(-50%);
+    z-index: 1;
+    border: 1px solid #ccc;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    background: none;
+}
+.category-slider .slick-next {
+    position: absolute;
+    top: 50%;
+    right: -40px;
+    transform: translateY(-50%);
+    z-index: 1;
+    border: 1px solid #ccc;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    background: none;
+}
+.product {
+    margin-left: 5px;
+    margin-right: 5px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+.product a {
+    text-decoration: none;
+    color: #000;
+    font-weight: bold;
+    font-size: 16px;
+    line-height: 1.5;
+    font-weight: 400;
+}
+.product .product-current-price {
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 24px;
+    color: rgb(27, 93, 213);
+}
+.product-slider .slick-prev {
+    position: absolute;
+    top: 50%;
+    left: -40px;
+    transform: translateY(-50%);
+    z-index: 1;
+    border: 1px solid #ccc;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    background: none;
+}
+.product-slider .slick-next {
+    position: absolute;
+    top: 50%;
+    right: -40px;
+    transform: translateY(-50%);
+    z-index: 1;
+    border: 1px solid #ccc;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    background: none;
+}
+.home-page-brand-description {
+    margin-top: 100px;
+}
+footer {
+    background-color: rgb(0, 47, 103);
+}
+
+
+@media screen and (max-width: 767px) {
+    header {
+        max-width: 100% !important;
+    }
+    .logo {
+        width: 30%;
+    }
+    .navbar .right-wrapper {
+        position: absolute;
+        top: 0;
+    }
+    .top-nav {
+        border-bottom: 0px;
+        padding-top: 20px !important;
+    }
+    .feature-2 {
+        border-right: 0px !important;
+    }
+
+    .feature-3, .feature-4 {
+        margin-top: 20px !important;
+    }
+
+    .category-slider .slick-prev {
+        left: 0px;
+    }
+    .category-slider .slick-next {
+        right: 0px;
+    }
+}
