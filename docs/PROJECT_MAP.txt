@@ -104,6 +104,7 @@ C:.
 |       2 - superadmin_insert.sql
 |       
 +---docs
+|       CODE_INDEX.md
 |       PATHS_INDEX.md
 |       PROJECT_MAP.txt
 |       
@@ -256,6 +257,11 @@ C:.
 |   \---SuperAdmin
 |       \---GlobalSetup
 |               GlobalSetup.php
+|               
++---salahuddin081402
+|   \---TrimatricSaasDev.git
+|       \---system-commandline-sentinel-files
+|               dotnet-suggest-registration-git-credential-manager, Version=2.6.1.0, Culture=neutral, PublicKeyToken=null
 |               
 +---storage
 |   +---app

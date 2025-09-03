@@ -4,10 +4,10 @@ REM ==========================================
 REM TrimatricSaasDev: One-click GitHub Sync + Raw Index
 REM - Uploads ALL project files (adds/mods/deletes)
 REM - Force-includes .env and DB folder
-REM - Keeps your repo URL/identity
-REM - Generates docs/PROJECT_MAP.txt (tree)
-REM - Generates docs/PATHS_INDEX.md (seed list)
-REM - Generates docs/CODE_INDEX.md (RAW LINKS I can always read)
+REM - Generates:
+REM     docs/PROJECT_MAP.txt   (tree view)
+REM     docs/PATHS_INDEX.md    (seed paths)
+REM     docs/CODE_INDEX.md     (RAW links for reliable browsing)
 REM ==========================================
 
 REM >>> EDIT ONLY IF YOU MOVE THE PROJECT OR CHANGE REPO <<<
@@ -40,6 +40,7 @@ if "%CURBR%"=="" (
 ) else (
   if /i not "%CURBR%"=="main" git branch -M main
 )
+set "BRANCH=main"
 
 REM --- Configure identity if missing ---
 for /f "delims=" %%u in ('git config user.email 2^>nul') do set GEMAIL=%%u
@@ -57,10 +58,10 @@ if "%ORIGIN_URL%"=="" (
 )
 
 REM --- If remote branch exists, rebase onto it to avoid divergence ---
-git ls-remote --exit-code --heads origin main >nul 2>&1
+git ls-remote --exit-code --heads origin %BRANCH% >nul 2>&1
 if not errorlevel 1 (
-  git fetch origin main >nul 2>&1
-  git pull --rebase origin main >nul 2>&1
+  git fetch origin %BRANCH% >nul 2>&1
+  git pull --rebase origin %BRANCH% >nul 2>&1
 )
 
 REM --- Build/update docs/ (maps + seeds) ---
@@ -85,8 +86,7 @@ if exist ".env" git add -f .env
 REM --- Stage everything (adds/mods/deletes), including DB/ ---
 git add -A
 
-REM --- Parse owner/repo/branch for RAW links (for CODE_INDEX.md) ---
-set "BRANCH=main"
+REM --- Parse owner/repo for RAW links (for CODE_INDEX.md) ---
 set "TMP=%REPO_URL:https://github.com/=%"
 for /f "tokens=1,2 delims=/" %%a in ("%TMP%") do (
   set OWNER=%%a
@@ -100,9 +100,9 @@ set "INDEX=docs\CODE_INDEX.md"
 >>"%INDEX%" echo **Repo:** https://github.com/!OWNER!/!REPONAME! ^| **Branch:** !BRANCH!
 >>"%INDEX%" echo _Generated: %DATE% %TIME%_
 >>"%INDEX%" echo.
->>"%INDEX%" echo > **Tip:** Share this file's URL. I will open it and follow the raw links to read any source reliably.
+>>"%INDEX%" echo ^> **Tip:** Share this file's URL. I will open it and follow the raw links to read any source reliably.
 >>"%INDEX%" echo.
-REM Collect tracked+staged files (Blade uses .php extension, so included)
+REM Collect tracked files (Blade uses .php extension, so included)
 for /f "usebackq delims=" %%F in (`git ls-files`) do call :ADDLINE "%%F"
 REM Add the index itself
 git add "%INDEX%" >nul 2>&1
@@ -118,7 +118,7 @@ if "%COUNT%"=="0" (
 )
 
 REM --- Push to origin/main ---
-git push -u origin main
+git push -u origin %BRANCH%
 
 REM --- Tag snapshot (ignore errors if tags disallowed) ---
 git tag -f auto-%TS% >nul 2>&1

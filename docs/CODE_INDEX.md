@@ -1,7 +1,8 @@
 # Code Index (raw links)
 **Repo:** https://github.com/salahuddin081402/TrimatricSaasDev | **Branch:** main
-_Generated: Wed 09/03/2025 11:11:31.92_
+_Generated: Wed 09/03/2025 11:15:39.06_
 
+> **Tip:** Share this file's URL. I will open it and follow the raw links to read any source reliably.
 
 - DB/1 - superadmin.sql (raw) : https://raw.githubusercontent.com/salahuddin081402/TrimatricSaasDev/main/DB/1 - superadmin.sql
 - DB/2 - superadmin_insert.sql (raw) : https://raw.githubusercontent.com/salahuddin081402/TrimatricSaasDev/main/DB/2 - superadmin_insert.sql
@@ -53,6 +54,7 @@ _Generated: Wed 09/03/2025 11:11:31.92_
 - database/migrations/2025_08_09_000011_create_activity_logs_table.php (raw) : https://raw.githubusercontent.com/salahuddin081402/TrimatricSaasDev/main/database/migrations/2025_08_09_000011_create_activity_logs_table.php
 - database/migrations/2025_08_13_082625_create_sessions_table.php (raw) : https://raw.githubusercontent.com/salahuddin081402/TrimatricSaasDev/main/database/migrations/2025_08_13_082625_create_sessions_table.php
 - database/seeders/DatabaseSeeder.php (raw) : https://raw.githubusercontent.com/salahuddin081402/TrimatricSaasDev/main/database/seeders/DatabaseSeeder.php
+- docs/CODE_INDEX.md (raw) : https://raw.githubusercontent.com/salahuddin081402/TrimatricSaasDev/main/docs/CODE_INDEX.md
 - docs/PATHS_INDEX.md (raw) : https://raw.githubusercontent.com/salahuddin081402/TrimatricSaasDev/main/docs/PATHS_INDEX.md
 - public/assets/css/app.css (raw) : https://raw.githubusercontent.com/salahuddin081402/TrimatricSaasDev/main/public/assets/css/app.css
 - public/assets/js/app.js (raw) : https://raw.githubusercontent.com/salahuddin081402/TrimatricSaasDev/main/public/assets/js/app.js
