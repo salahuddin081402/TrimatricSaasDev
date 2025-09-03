@@ -1,21 +1,22 @@
 @echo off
 setlocal ENABLEDELAYEDEXPANSION
 REM ==========================================
-REM TrimatricSaasDev: One-click GitHub Sync + Raw Index
+REM TrimatricSaasDev: One-click GitHub Sync + Raw Index (Final)
 REM - Uploads ALL project files (adds/mods/deletes)
 REM - Force-includes .env and DB folder
 REM - Generates:
 REM     docs/PROJECT_MAP.txt   (tree view)
 REM     docs/PATHS_INDEX.md    (seed paths)
 REM     docs/CODE_INDEX.md     (RAW links for reliable browsing)
+REM - Adds local excludes to avoid tool-generated junk
 REM ==========================================
 
-REM >>> EDIT ONLY IF YOU MOVE THE PROJECT OR CHANGE REPO <<<
+REM >>> PRESET FOR YOUR PROJECT (no edits needed) <<<
 set "PROJECT_ROOT=C:\xampp\htdocs\laravel\TrimatricSaasDev"
 set "REPO_URL=https://github.com/salahuddin081402/TrimatricSaasDev.git"
 set "GIT_USER_EMAIL=salahuddin081402@gmail.com"
 set "GIT_USER_NAME=Salahuddin Ahmed"
-REM <<< END EDIT SECTION <<<
+REM <<< END PRESET >>>
 
 REM --- Jump to project root ---
 if not exist "%PROJECT_ROOT%\" (
@@ -64,6 +65,15 @@ if not errorlevel 1 (
   git pull --rebase origin %BRANCH% >nul 2>&1
 )
 
+REM --- Local excludes to prevent tool-generated junk from being re-added ---
+if not exist ".git\info" mkdir ".git\info"
+findstr /C:"system-commandline-sentinel-files/" .git\info\exclude >nul 2>&1 || (
+  echo **/system-commandline-sentinel-files/>> .git\info\exclude
+)
+findstr /C:"/*.git/" .git\info\exclude >nul 2>&1 || (
+  echo **/*.git/>> .git\info\exclude
+)
+
 REM --- Build/update docs/ (maps + seeds) ---
 if not exist "docs" mkdir docs 2>nul
 tree /F /A > "docs\PROJECT_MAP.txt"
@@ -86,7 +96,9 @@ if exist ".env" git add -f .env
 REM --- Stage everything (adds/mods/deletes), including DB/ ---
 git add -A
 
-REM --- Parse owner/repo for RAW links (for CODE_INDEX.md) ---
+REM --- Parse owner/repo for RAW links ---
+set "OWNER="
+set "REPONAME="
 set "TMP=%REPO_URL:https://github.com/=%"
 for /f "tokens=1,2 delims=/" %%a in ("%TMP%") do (
   set OWNER=%%a
@@ -96,15 +108,13 @@ if /i "!REPONAME:~-4!"==".git" set "REPONAME=!REPONAME:~0,-4!"
 
 REM --- Generate docs/CODE_INDEX.md (RAW links I can always fetch) ---
 set "INDEX=docs\CODE_INDEX.md"
-> "%INDEX%" echo # Code Index (raw links)
+> "%INDEX%" echo # Code Index ^(raw links^)
 >>"%INDEX%" echo **Repo:** https://github.com/!OWNER!/!REPONAME! ^| **Branch:** !BRANCH!
 >>"%INDEX%" echo _Generated: %DATE% %TIME%_
 >>"%INDEX%" echo.
 >>"%INDEX%" echo ^> **Tip:** Share this file's URL. I will open it and follow the raw links to read any source reliably.
 >>"%INDEX%" echo.
-REM Collect tracked files (Blade uses .php extension, so included)
 for /f "usebackq delims=" %%F in (`git ls-files`) do call :ADDLINE "%%F"
-REM Add the index itself
 git add "%INDEX%" >nul 2>&1
 
 REM --- Commit if there are changes ---
