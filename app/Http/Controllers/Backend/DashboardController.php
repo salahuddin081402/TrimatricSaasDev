@@ -18,16 +18,39 @@ class DashboardController extends Controller
 
     /**
      * Public landing (guest) — tenant-aware.
-     * If a user exists, immediately redirect to the correct index within the SAME context (tenant/global).
+     * If a user exists, immediately redirect to the correct index within the user's tenant.
+     *
+     * Example:
+     *   If user belongs to Trimatric Global but opens /company/abc-limited/dashboard/public,
+     *   we redirect them to /company/trimatric-global/dashboard to keep tenant context canonical.
      */
     public function public(?Company $company = null)
     {
         $uid = $this->currentUserId();
 
         if ($uid) {
-            // User exists → go to index in same scope
-            return $company
-                ? redirect()->route('backend.company.dashboard.index', ['company' => $company->slug])
+            // --- Canonicalize to user's own tenant ------------------------------
+            $user = DB::table('users')->where('id', $uid)->first();
+            $targetSlug = null;
+
+            if ($user) {
+                $userCompanyId = (int) ($user->company_id ?? 0);
+                if ($userCompanyId > 0) {
+                    $targetSlug = DB::table('companies')->where('id', $userCompanyId)->value('slug');
+                } else {
+                    // Optional: fallback via role -> company_id
+                    $roleId = (int) ($user->role_id ?? 0);
+                    if ($roleId > 0) {
+                        $roleCompanyId = (int) DB::table('roles')->where('id', $roleId)->value('company_id');
+                        if ($roleCompanyId > 0) {
+                            $targetSlug = DB::table('companies')->where('id', $roleCompanyId)->value('slug');
+                        }
+                    }
+                }
+            }
+
+            return $targetSlug
+                ? redirect()->route('backend.company.dashboard.index', ['company' => $targetSlug])
                 : redirect()->route('backend.dashboard.index');
         }
 
@@ -40,6 +63,7 @@ class DashboardController extends Controller
     /**
      * Role-aware dashboard index — tenant-aware.
      * If no user, go to the matching public page in SAME context.
+     * If authenticated, ensure the URL's tenant matches the user's tenant (canonicalize).
      */
     public function index(?Company $company = null)
     {
@@ -60,6 +84,35 @@ class DashboardController extends Controller
                 : redirect()->route('backend.dashboard.public');
         }
 
+        // --- Canonicalize tenant context for authenticated users -----------------
+        // If URL has a company slug that differs from the user's company slug, redirect to user's tenant.
+        // If URL has no slug but user has a tenant, redirect to that tenant.
+        $userCompanySlug = null;
+        $userCompanyId = (int) ($user->company_id ?? 0);
+        if ($userCompanyId > 0) {
+            $userCompanySlug = DB::table('companies')->where('id', $userCompanyId)->value('slug');
+        } else {
+            // Optional: fallback via role -> company_id
+            $roleId = (int) ($user->role_id ?? 0);
+            if ($roleId > 0) {
+                $roleCompanyId = (int) DB::table('roles')->where('id', $roleId)->value('company_id');
+                if ($roleCompanyId > 0) {
+                    $userCompanySlug = DB::table('companies')->where('id', $roleCompanyId)->value('slug');
+                }
+            }
+        }
+
+        if ($company) {
+            if ($userCompanySlug && $company->slug !== $userCompanySlug) {
+                return redirect()->route('backend.company.dashboard.index', ['company' => $userCompanySlug]);
+            }
+        } else {
+            if ($userCompanySlug) {
+                return redirect()->route('backend.company.dashboard.index', ['company' => $userCompanySlug]);
+            }
+        }
+
+        // Determine role type view as you already do
         $role = DB::table('roles')->where('id', $user->role_id)->first();
         $roleType = null;
         if ($role) {

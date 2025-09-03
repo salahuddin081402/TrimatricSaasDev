@@ -104,6 +104,7 @@ C:.
 |       2 - superadmin_insert.sql
 |       
 +---docs
+|       PATHS_INDEX.md
 |       PROJECT_MAP.txt
 |       
 +---public
@@ -283,16 +284,16 @@ C:.
 |   |   |       
 |   |   \---views
 |   |           .gitignore
-|   |           036b3d0357a178b5dccb11babce0ab2f.php
-|   |           04671270b4e3fdaccdf97707ce54c1f9.php
-|   |           0e73ce24177ff8ca812fa0f6fe130210.php
-|   |           14c520dc7b2d83f5ceef0c5fa3fce9b8.php
-|   |           4d12981a2721220867de4989b096f54c.php
-|   |           4f932ff644ff5ed3981bfb0aaac9e77c.php
-|   |           61fce1bc99359380590549037b32505b.php
-|   |           688fe9823a1d9f35c852fef8ad7235b9.php
-|   |           ed628090d6e1efd0b61bd7236227bc18.php
-|   |           f55070827c4f31b1c9f303d24feb335d.php
+|   |           035926809bee9e0ec2d8aa08013c6249.php
+|   |           0f84ee9e94140e77d1a8e0203a8d235d.php
+|   |           1ead071bfcfc0142ee7a8985101f3864.php
+|   |           6f9b2fdbc1f8beb9b21058bea54cbe83.php
+|   |           719b4e4ff296911f84d82e514660881d.php
+|   |           90042e0bbb4fbd4f29aec9f4636239ab.php
+|   |           ad53f8083f67990fef0339fa0564c630.php
+|   |           b15a36dd5bb21b25055d6630a86d6df7.php
+|   |           fe610635545e9200546d4af30f050910.php
+|   |           ffbe735fb1d2f23b13a30aa34199c213.php
 |   |           
 |   \---logs
 |           .gitignore
