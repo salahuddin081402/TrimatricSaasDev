@@ -1,0 +1,47 @@
+/* Frozen Trimatric buttons (responsive, with icons) */
+.btn-x{
+  --bg:#6b7280; --fg:#fff; --shadow:rgba(0,0,0,.2);
+  display:inline-flex; align-items:center; gap:10px; padding:10px 16px; border:0; border-radius:8px;
+  background:var(--bg); color:var(--fg); font-weight:600; font-size:14px; cursor:pointer;
+  box-shadow:0 6px 14px -6px var(--shadow);
+  transition:transform .12s ease, box-shadow .2s ease, filter .2s ease;
+}
+.btn-x svg{ width:18px; height:18px; }
+.btn-x:hover{ transform:translateY(-1px); box-shadow:0 10px 20px -10px var(--shadow); filter:brightness(1.02); }
+.btn-x:focus-visible{ outline:2px solid rgba(59,130,246,.9); outline-offset:2px; }
+.btn-x:disabled,
+.btn-x[disabled]{ opacity:.45; filter:grayscale(.35); cursor:not-allowed; box-shadow:none; transform:none; }
+
+/* Size modifiers */
+.btn-xs{ padding:6px 10px !important; font-size:12px !important; gap:6px !important; }
+.btn-xs svg{ width:14px; height:14px; }
+
+/* Variants (extend as needed) */
+.btn-save{ --bg:#22a06b; }
+.btn-cancel{ --bg:#c62828; }
+.btn-add{ --bg:#2c7be5; }
+.btn-edit{ --bg:#6d28d9; }
+.btn-delete{ --bg:#d32f2f; }
+.btn-approve{ --bg:#15803d; }
+.btn-decline{ --bg:#b45309; }
+.btn-escalate{ --bg:#ef4444; }
+.btn-view{ --bg:#0ea5e9; }
+.btn-input{ --bg:#0284c7; }
+.btn-revision{ --bg:#b91c1c; }
+.btn-accept{ --bg:#16a34a; }
+.btn-login{ --bg:#0d9488; }
+.btn-signup{ --bg:#2563eb; }
+.btn-logout{ --bg:#374151; }
+.btn-requisition{ --bg:#0ea5e9; }
+.btn-view-input{ --bg:#334155; }
+
+/* Global variants used in RMGM blades */
+.btn-back{ --bg:#334155; }
+.btn-export{ --bg:#0ea5e9; }
+.btn-refresh{ --bg:#16a34a; }
+
+/* Compact on small screens */
+@media (max-width:600px){
+  .btn-x{ padding:8px 12px; font-size:13px; gap:8px; }
+  .btn-x svg{ width:16px; height:16px; }
+}

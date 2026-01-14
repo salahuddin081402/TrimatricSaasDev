@@ -1,0 +1,12 @@
+/* Common vibrant table header style (no Bootstrap dependency) */
+.th-vibrant {
+  background: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%);
+  color: #ffffff;
+}
+.th-vibrant th {
+  background: transparent;
+  color: #ffffff;
+  font-weight: 600;
+  letter-spacing: .3px;
+  border-color: rgba(255,255,255,0.25) !important;
+}

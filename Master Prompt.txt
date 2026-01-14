@@ -1,0 +1,110 @@
+Master Prompt
+---------------
+
+I am very much finicky about image handling mechanism. I want images should show in preview even after validation error. I want the images should store in the path i already mentioned to you. Max Image size and all possible types should be handled by a config file and this config file should be re-used in my next upcoming modules also. If the image storage path is not found , it should be created by system at the first image insert. if image is edited then the old file should be deleted physically also and update the table image field properly. blade and controller should handle the path properly. Database and front-end level validations should be handled separately and both properly. My html should be strictly followed. chatgpt should not change it by it self during creating the blade. controller should be properly hooked up with blade no matter how big it is. DB script should be strictly followed during controller and blade. No superficial table name, field name is not acceptable. If data missing, all missing fields should be made red color bordered at a time and focus should be on the first error/missing field. 
+
+I want named route strictly followed in controller and blade as well and properly as i followed in all my modules previously. Since I have used appserviceprovider to prefix parent folders it should be considered also. Without finalizing route file, route name - no controller and blade should be build.
+
+php artisan route:list | findstr /I "parameters"
+
+----------------------------------------------------------------------------------------------
+Now, I will give you the html file again. Memorize it . The final blade should look like 100% like this but alert message , toaster should be customized with good looking background.
+--------------------------------------------------------------------------------
+Storage path pattern
+------------------------
+All final images must live on the **public disk** (`storage/app/public`) and be exposed via `/storage/...`.
+
+The final PUBLIC URL pattern must be:
+
+  /storage/{country}/{company-slug}/images/parameter/interior/{table_name}/{file-name.ext}
+
+
+-------------------------------------------------------------------------------------------------------------------------
+Current user id ,company ID, country, max image size should be selected using the following kind of function in controller.
+
+        $uid = $this->currentUserId();
+        abort_if(!$uid, 403, 'Login required');
+
+        $companyRow = $this->resolveCompany($company);
+        abort_if(!$companyRow, 404, 'Company not found');
+        $companyId = (int) $companyRow->id;
+
+---------------------------------------------------------------------------------------------------------------
+
+/* ===================== UTILITIES ===================== */
+
+    private function currentUserId(): ?int
+    {
+        $forced = config('header.dev_force_user_id');
+        return Auth::id() ?? (is_numeric($forced) ? (int)$forced : null);
+    }
+
+    /** Resolve company by {company} slug | id | model or fallback from user */
+    private function resolveCompany($routeCompany): ?object
+    {
+        if ($routeCompany instanceof \App\Models\SuperAdmin\GlobalSetup\Company) {
+            return DB::table('companies')
+                ->where('id', $routeCompany->id)
+                ->where('status', 1)
+                ->whereNull('deleted_at')
+                ->first();
+        }
+        if (is_numeric($routeCompany)) {
+            return DB::table('companies')
+                ->where('id', $routeCompany)
+                ->where('status', 1)
+                ->whereNull('deleted_at')
+                ->first();
+        }
+        if (is_string($routeCompany)) {
+            $c = DB::table('companies')
+                ->where('slug', $routeCompany)
+                ->where('status', 1)
+                ->whereNull('deleted_at')
+                ->first();
+            if ($c) {
+                return $c;
+            }
+        }
+
+        $uid = $this->currentUserId();
+        if ($uid) {
+            $user = DB::table('users')->where('id', $uid)->first();
+            if ($user && $user->company_id) {
+                return DB::table('companies')
+                    ->where('id', $user->company_id)
+                    ->where('status', 1)
+                    ->whereNull('deleted_at')
+                    ->first();
+            }
+            if ($user && $user->role_id) {
+                return DB::table('companies')
+                    ->where('status', 1)
+                    ->whereNull('deleted_at')
+                    ->orderBy('id')
+                    ->first();
+            }
+        }
+
+        return null;
+    }
+
+
+   private function maxImageKB(): int
+    {
+        return (int) config('config_file_name.property/variable', 1024);
+    }
+
+    /** Country record for a company (name, short_code). Neutral fallbacks if missing. */
+    private function companyCountry(object $companyRow): object
+    {
+        $c = DB::table('countries')
+            ->where('id', $companyRow->country_id)
+            ->first(['name', 'short_code']);
+        $name  = $c->name ?? 'global';
+        $short = strtoupper($c->short_code ?? 'XX');
+        return (object) ['name' => $name, 'short_code' => $short];
+    }
+
+
+----------------------------------------------------------------

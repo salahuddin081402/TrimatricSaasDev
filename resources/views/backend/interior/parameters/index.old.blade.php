@@ -1,0 +1,2467 @@
+{{-- resources/views/backend/interior/parameters/index.blade.php --}}
+
+@extends('backend.layouts.master')
+
+@php
+    /** @var \Illuminate\Support\Collection $projectTypes */
+    /** @var \Illuminate\Support\Collection $projectSubtypes */
+    /** @var \Illuminate\Support\Collection $categories */
+    /** @var \Illuminate\Support\Collection $subcategories */
+
+    $companyParam = request()->route('company');
+    $baseUrl      = url('interior/' . $companyParam . '/parameters');
+
+    $initialEntity = $activeEntity ?? 'project_type';
+    $initialMode   = old('id') ? 'edit' : 'create';
+
+    $maxKB        = $maxImageKB ?? 2048;
+    $allowedMimes = $allowedMimes ?? ['jpg','jpeg','png','webp'];
+
+    $entityMetaMap = [
+        'project_type' => [
+            'label'    => 'Project Types',
+            'title'    => 'Project Types · Create / Edit',
+            'subtitle' => 'Maintain top-level interior project types like Residential, Commercial, Hospitality.',
+        ],
+        'project_subtype' => [
+            'label'    => 'Project Sub-Types',
+            'title'    => 'Project Sub-Types · Create / Edit',
+            'subtitle' => 'Configure building/unit patterns such as Apartment, Duplex, Villa, Office.',
+        ],
+        'space' => [
+            'label'    => 'Spaces',
+            'title'    => 'Spaces · Create / Edit',
+            'subtitle' => 'Define spaces inside a project (Master Bed, Living, Dining, Kitchen, etc.).',
+        ],
+        'category' => [
+            'label'    => 'Item Categories',
+            'title'    => 'Item Categories · Create / Edit',
+            'subtitle' => 'Manage parent categories like Furniture, Lighting, Curtains & Fabrics.',
+        ],
+        'subcategory' => [
+            'label'    => 'Item Sub-Categories',
+            'title'    => 'Item Sub-Categories · Create / Edit',
+            'subtitle' => 'Fine-tune sub-categories like Double Bed, Wardrobe, Study Desk, etc.',
+        ],
+        'product' => [
+            'label'    => 'Products',
+            'title'    => 'Products · Create / Edit',
+            'subtitle' => 'Maintain a detailed, reusable product library to attach in Requisitions.',
+        ],
+    ];
+
+    $currentMeta = $entityMetaMap[$initialEntity] ?? $entityMetaMap['project_type'];
+
+    $projectTypeMap    = ($projectTypes ?? collect())->pluck('name', 'id');
+    $projectSubtypeMap = ($projectSubtypes ?? collect())->pluck('name', 'id');
+    $categoryMap       = ($categories ?? collect())->pluck('name', 'id');
+
+    $serverAlertType    = null;
+    $serverAlertMessage = null;
+
+    if ($errors->any()) {
+        $serverAlertType    = 'error';
+        $serverAlertMessage = $errors->first();
+    } elseif (session('error')) {
+        $serverAlertType    = 'error';
+        $serverAlertMessage = session('error');
+    } elseif (session('success')) {
+        $serverAlertType    = 'info';
+        $serverAlertMessage = session('success');
+    }
+@endphp
+
+@push('styles')
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --bg: #f9fafb;
+        --bg-soft: #f3f4f6;
+        --bg-elevated: #ffffff;
+        --panel: #ffffff;
+        --panel-soft: #ffffff;
+
+        --ink: #111827;
+        --ink-soft: #6b7280;
+        --border-subtle: rgba(148, 163, 184, 0.45);
+        --border-strong: #2563eb;
+
+        --accent: #2563eb;
+        --accent-soft: rgba(37, 99, 235, 0.08);
+        --accent-strong: #1d4ed8;
+        --accent-warm: #f97316;
+
+        --muted: #6b7280;
+        --muted-soft: #e5e7eb;
+
+        --radius-card: 18px;
+        --radius-pill: 999px;
+
+        --shadow-soft: 0 18px 48px rgba(15, 23, 42, 0.08);
+        --shadow-chip: 0 10px 26px rgba(15, 23, 42, 0.08);
+
+        --error: #dc2626;
+        --success: #16a34a;
+
+        --field-bg: #f9fafb;
+        --field-border: rgba(148, 163, 184, 0.65);
+        --field-border-focus: #2563eb;
+
+        --tag-bg: #eff6ff;
+        --tag-border: #bfdbfe;
+        --tag-text: #1d4ed8;
+    }
+
+    * {
+        box-sizing: border-box;
+    }
+
+    body {
+        margin: 0;
+        font-family: "Poppins", system-ui, "Segoe UI", sans-serif;
+        background: var(--bg);
+        color: var(--ink);
+        -webkit-font-smoothing: antialiased;
+    }
+
+    .ip-page {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .ip-container {
+        width: 100%;
+        max-width: 1240px;
+        margin: 0 auto;
+        padding: 12px 16px 28px;
+    }
+
+    @media (min-width: 992px) {
+        .ip-container {
+            padding: 14px 16px 36px;
+        }
+    }
+
+    .ip-header {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+        padding: 4px 0 6px;
+        border-bottom: 1px solid rgba(148,163,184,0.25);
+    }
+
+    .ip-brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .ip-brand-mark {
+        width: 30px;
+        height: 30px;
+        border-radius: 50px;
+        background:
+            radial-gradient(circle at 20% 15%, #ffb908, transparent 55%),
+            radial-gradient(circle at 85% 10%, #38bdf8, transparent 55%),
+            radial-gradient(circle at 40% 85%, #a855f7, transparent 60%);
+        box-shadow: 0 3px 15px rgba(9, 9, 9, 0.5);
+    }
+
+    .ip-brand-text {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .ip-brand-title {
+        font-size: 0.9rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        font-weight: 600;
+        color: #111827;
+    }
+
+    .ip-brand-sub {
+        font-size: 0.7rem;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        color: #6b7280;
+    }
+
+    .ip-header-title {
+        font-size: 1rem;
+        font-weight: 500;
+        color: #111827;
+        text-align: right;
+    }
+
+    .ip-main {
+        margin-top: 4px;
+    }
+
+    .ip-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.6fr);
+        gap: 18px;
+    }
+
+    @media (max-width: 991.98px) {
+        .ip-layout {
+            grid-template-columns: minmax(0, 1fr);
+        }
+    }
+
+    .ip-card {
+        border-radius: var(--radius-card);
+        background: rgb(243, 245, 246);
+        box-shadow: 0px 2px 10px rgb(20, 20, 20);
+    }
+
+    .ip-card-header {
+        padding: 12px 16px 8px;
+        border-radius: 20px 20px 0 0;
+        border-bottom: 1px solid rgb(123, 123, 123);
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 10px;
+    }
+
+    .ip-card-title {
+        font-size: 0.98rem;
+        font-weight: 500;
+        color: #171717;
+    }
+
+    .ip-card-subtitle {
+        font-size: 0.78rem;
+        color: #6b7280;
+        margin-top: 2px;
+    }
+
+    .ip-card-body {
+        padding: 12px 16px 16px;
+    }
+
+    .ip-entity-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .ip-entity-pill {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 9px 12px;
+        border-radius: 12px;
+        border: 1px solid rgb(173, 173, 173);
+        background: #f9fafb;
+        cursor: pointer;
+        transition: border-color 0.12s ease, background 0.12s ease, transform 0.1s ease, box-shadow 0.12s ease;
+        font-size: 0.84rem;
+        color: #030303;
+        box-shadow: 0px 2px 10px rgb(81, 81, 81);
+    }
+
+    .ip-entity-pill span:first-child {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .ip-entity-pill small {
+        font-size: 0.72rem;
+        color: #8e908d;
+    }
+
+    .ip-entity-pill-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 999px;
+        background-color: rgb(62, 189, 51);
+    }
+
+    .ip-entity-pill:hover {
+        transform: translateY(-1px);
+        border-color: var(--border-strong);
+        box-shadow: 0 10px 26px rgb(254, 252, 252);
+        background: #d7d7d7;
+    }
+
+    .ip-entity-pill.active {
+        border-color:#a1a3a2;
+        background: #eff6ff;
+    }
+
+    .ip-entity-pill.active .ip-entity-pill-dot {
+        background: #ff5b5b;
+        box-shadow: 0 0 8px rgb(39, 39, 39);
+    }
+
+    .ip-badge-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 3px 9px;
+        border-radius: var(--radius-pill);
+        background: #f9fafb;
+        border: 1px solid rgb(191, 191, 191);
+        box-shadow: 0px 2px 5px rgb(131, 131, 131);
+        font-size: 0.72rem;
+        color: #000000;
+    }
+
+    .ip-badge-pill strong {
+        color: #2d2d2d;
+    }
+
+    .ip-help {
+        font-size: 0.72rem;
+        color: #000000;
+    }
+
+    .ip-main-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.3fr);
+        gap: 16px;
+    }
+
+    @media (max-width: 991.98px) {
+        .ip-main-grid {
+            grid-template-columns: minmax(0, 1fr);
+        }
+    }
+
+    .ip-list-panel {
+        border-right: 1px solid rgba(154, 154, 154, 0.748);
+        padding-right: 8px;
+    }
+
+    @media (max-width: 991.98px) {
+        .ip-list-panel {
+            border-right: none;
+            border-bottom: 1px solid rgba(148,163,184,0.3);
+            padding-right: 0;
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+        }
+    }
+
+    .ip-form-panel {
+        padding-left: 4px;
+    }
+
+    .ip-record-toolbar {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-bottom: 8px;
+    }
+
+    .ip-record-title {
+        font-size: 0.82rem;
+        font-weight: 500;
+        color: #271c11;
+    }
+
+    .ip-record-search {
+        position: relative;
+    }
+
+    .ip-record-search input {
+        width: 100%;
+        border-radius: 999px;
+        border: 2px solid rgb(77, 230, 42);
+        padding: 6px 28px 6px 10px;
+        background: #f9fbf9;
+        font-size: 0.78rem;
+        color: #2bed2e;
+        box-shadow: 0 2px 5px rgb(26, 26, 26);
+    }
+
+    .ip-record-search input::placeholder {
+        color: #9ca3af;
+    }
+
+    .ip-record-search-icon {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 0.76rem;
+        color: #afa39c;
+    }
+
+    .ip-record-sets {
+        max-height: 340px;
+        overflow-y: auto;
+        padding-right: 4px;
+    }
+
+    .ip-record-set {
+        display: none;
+    }
+
+    .ip-record-set.active {
+        display: block;
+    }
+
+    .ip-record-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .ip-record-item {
+        width: 100%;
+        border-radius: 12px;
+        border: 1px solid rgba(103, 218, 20, 0.9);
+        background: #b4f4a4;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 6px 8px;
+        cursor: pointer;
+        text-align: left;
+        font-size: 0.8rem;
+        color: #3e3e3f;
+        box-shadow: 0 5px 15px rgb(246, 246, 246);
+        transition: border-color 0.12s ease, background 0.12s ease, transform 0.1s ease, box-shadow 0.12s ease;
+    }
+
+    .ip-record-item-left {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        flex: 1;
+    }
+
+    .ip-record-thumb {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        background: #9ca09d;
+        overflow: hidden;
+        flex-shrink: 0;
+        box-shadow: 0 5px 10px rgb(255, 255, 255);
+    }
+
+    .ip-record-thumb img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+
+    .ip-record-main {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+    }
+
+    .ip-record-main-title {
+        font-size: 0.82rem;
+        font-weight: 500;
+        color: #271911;
+    }
+
+    .ip-record-main-meta {
+        font-size: 0.72rem;
+        color: #80736b;
+    }
+
+    .ip-record-right-pill {
+        font-size: 0.7rem;
+        padding: 3px 8px;
+        border-radius: 999px;
+        background: var(--tag-bg);
+        border: 2px solid #10e044;
+        color: #1ab31d;
+        flex-shrink: 0;
+    }
+
+    .ip-record-item:hover {
+        transform: translateY(-1px);
+        border-color: #49d41b;
+        background: #f9fafb;
+        box-shadow: 0 1px 8px rgb(35, 126, 21);
+    }
+
+    .ip-record-item.active {
+        border-color: #49d41b;
+        background: #eff6ff;
+    }
+
+    .ip-record-empty {
+        font-size: 0.76rem;
+        color: #9ca3af;
+        padding: 8px 2px;
+    }
+
+    .ip-form-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 10px;
+        margin-top: 4px;
+    }
+
+    .ip-form-entity-label {
+        font-size: 0.82rem;
+        color: #6b7280;
+    }
+
+    .ip-form-entity-label strong {
+        color: #111827;
+    }
+
+    .ip-form-mode-badge {
+        padding: 4px 11px;
+        border-radius: var(--radius-pill);
+        border: 1px solid rgba(34,197,94,0.85);
+        background: rgba(220,252,231,0.85);
+        color: #166534;
+        font-size: 0.75rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .ip-form-mode-badge[data-mode="create"] {
+        border-color: rgba(71, 230, 23, 0.9);
+        background: #f5f5f5;
+        color: #040404;
+    }
+
+    .ip-form-mode-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 999px;
+        background-color: currentColor;
+    }
+
+    .ip-alert {
+        display: none;
+        padding: 8px 12px;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        margin-bottom: 10px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+    }
+
+    .ip-alert span.ip-alert-text {
+        flex: 1;
+    }
+
+    .ip-alert-error {
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+        color: #b91c1c;
+    }
+
+    .ip-alert-info {
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+        color: #1d4ed8;
+    }
+
+    .ip-alert-close {
+        border: none;
+        background: transparent;
+        font-size: 1rem;
+        line-height: 1;
+        cursor: pointer;
+        color: inherit;
+    }
+
+    .ip-alert.show {
+        display: flex;
+    }
+
+    .ip-form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px 18px;
+    }
+
+    @media (max-width: 767.98px) {
+        .ip-form-grid {
+            grid-template-columns: minmax(0, 1fr);
+        }
+    }
+
+    .ip-form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .ip-label {
+        font-size: 0.78rem;
+        color: #111827;
+    }
+
+    .ip-label span.required {
+        color: #dc2626;
+        margin-left: 2px;
+    }
+
+    .ip-field,
+    .ip-textarea,
+    .ip-select {
+        width: 100%;
+        border-radius: 10px;
+        border: 1px solid var(--field-border);
+        background-color: var(--field-bg);
+        padding: 7px 9px;
+        font-size: 0.82rem;
+        color: #111827;
+        box-shadow: 0px 2px 5px rgb(81, 81, 81);
+    }
+
+    .ip-field::placeholder,
+    .ip-textarea::placeholder {
+        color: #9ca3af;
+    }
+
+    .ip-field:focus,
+    .ip-textarea:focus,
+    .ip-select:focus {
+        outline: none;
+        border-color: #10e044;
+        box-shadow: 0 0 0 1px rgb(35, 224, 47);
+        background-color: #ffffff;
+    }
+
+    .ip-textarea {
+        min-height: 76px;
+        resize: vertical;
+    }
+
+    .ip-toggle-row {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 4px;
+    }
+
+    .ip-toggle {
+        position: relative;
+        width: 32px;
+        height: 18px;
+    }
+
+    .ip-toggle input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .ip-toggle-track {
+        position: absolute;
+        cursor: pointer;
+        inset: 0;
+        background-color: #e5e7eb;
+        border-radius: 999px;
+        border: 1px solid rgba(148, 184, 154, 0.8);
+        transition: background-color 0.18s ease, border-color 0.18s ease;
+    }
+
+    .ip-toggle-knob {
+        position: absolute;
+        top: 1px;
+        left: 1px;
+        width: 14px;
+        height: 14px;
+        border-radius: 999px;
+        background: #ffffff;
+        transition: transform 0.18s ease;
+    }
+
+    .ip-toggle input:checked + .ip-toggle-track {
+        background: linear-gradient(135deg, #22c55e, #16a34a);
+        border-color: rgba(34,197,94,0.8);
+    }
+
+    .ip-toggle input:checked + .ip-toggle-track .ip-toggle-knob {
+        transform: translateX(12px);
+        background: #ecfdf3;
+    }
+
+    .ip-image-wrapper {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .ip-image-preview {
+        width: 100%;
+        max-width: 260px;
+        border-radius: 14px;
+        border: 1px dashed rgb(38, 38, 38);
+        background: #f9fafb;
+        padding: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 80px;
+        box-shadow: 0 2px 15px rgb(16, 16, 16);
+    }
+
+    .ip-image-preview img {
+        max-width: 100%;
+        max-height: 150px;
+        border-radius: 10px;
+        display: block;
+    }
+
+    .ip-image-placeholder {
+        font-size: 0.76rem;
+        color: #afa29c;
+        text-align: center;
+    }
+
+    .ip-file-input {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 10px;
+        border-radius: var(--radius-pill);
+        border: 2px dotted rgb(95, 95, 95);
+        font-size: 0.78rem;
+        color: #111827;
+        background: #ffffff;
+        cursor: pointer;
+        box-shadow: 0 2px 15px rgb(6, 6, 6);
+    }
+
+    .ip-file-input span.icon {
+        width: 18px;
+        height: 18px;
+        border-radius: 999px;
+        background: var(--accent-soft);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
+        color: #25eb39;
+    }
+
+    .ip-file-input input[type="file"] {
+        display: none;
+    }
+
+    .ip-file-meta {
+        font-size: 0.7rem;
+        color: #6d806b;
+    }
+
+    .ip-entity-form {
+        display: none;
+    }
+
+    .ip-entity-form.active {
+        display: block;
+    }
+
+    .ip-footer-actions {
+        margin-top: 14px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        justify-content: flex-end;
+    }
+
+    .ip-btn {
+        border-radius: var(--radius-pill);
+        border: none;
+        padding: 8px 20px;
+        font-size: 0.84rem;
+        font-weight: 500;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition:
+            transform 0.12s ease,
+            box-shadow 0.18s ease,
+            background 0.18s ease,
+            opacity 0.12s ease;
+        text-decoration: none;
+        letter-spacing: 0.02em;
+    }
+
+    .ip-btn-primary {
+        background: radial-gradient(circle at 0% 0%, #44f63b, #256a0c);
+        color: #ffffff;
+        box-shadow: 0 5px 15px rgb(26, 26, 26);
+        border: 1px solid rgb(104, 235, 52);
+    }
+
+    .ip-btn-primary:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 18px 40px rgb(244, 244, 244);
+    }
+
+    .ip-btn-secondary {
+        position: relative;
+        background: linear-gradient(135deg, #2adc39, #119619);
+        color: #111827;
+        border: 1px solid rgb(46, 220, 52);
+        box-shadow: 0 5px 15px rgb(26, 26, 26);
+    }
+
+    .ip-btn-secondary:hover {
+        background: linear-gradient(135deg, #30c32e, #0d6c23);
+        box-shadow: 0 14px 34px rgba(15,23,42,0.14);
+        transform: translateY(-1px);
+    }
+
+    .ip-btn-ghost {
+        position: relative;
+        background: rgb(49, 220, 72);
+        color: #111827;
+        border: 1px solid rgba(148,163,184,0.55);
+        box-shadow: 0 5px 15px rgb(26, 26, 26);
+        backdrop-filter: blur(7px);
+    }
+
+    .ip-btn-ghost:hover {
+        background: rgb(37, 221, 58);
+        border-color: rgb(88, 240, 58);
+        box-shadow: 0 14px 34px rgba(15,23,42,0.14);
+        transform: translateY(-1px);
+    }
+
+    .ip-btn-danger {
+        background: radial-gradient(circle at 0 0, #f12f2f, #c63108);
+        color: #ffffff;
+        box-shadow: 0 5px 15px rgb(26, 26, 26);
+        border: 1px solid rgb(253, 56, 56);
+    }
+
+    .ip-btn-danger:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 18px 40px rgb(251, 251, 251);
+    }
+
+    .ip-btn-icon {
+        width: 20px;
+        height: 20px;
+        border-radius: 999px;
+        background: #ffffff;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.78rem;
+        color: #35e743;
+        border: 1px solid rgb(61, 250, 71);
+    }
+
+    .ip-btn-icon--danger {
+        color: #b91c1c;
+        border-color: #fecaca;
+    }
+</style>
+@endpush
+
+@section('content')
+<div class="ip-page"
+     id="ipConfig"
+     data-base-url="{{ $baseUrl }}"
+     data-initial-entity="{{ $initialEntity }}"
+     data-initial-mode="{{ $initialMode }}">
+    <div class="ip-container">
+
+        <!-- Header -->
+        <header class="ip-header">
+            <div class="ip-brand">
+                <div class="ip-brand-mark"></div>
+                <div class="ip-brand-text">
+                    <div class="ip-brand-title">Interior Parameter</div>
+                    <div class="ip-brand-sub">Client Requisition · Master Setup</div>
+                </div>
+            </div>
+
+            <div class="ip-header-meta">
+                <div class="ip-header-title">Parameter Management – Interior Set</div>
+            </div>
+        </header>
+
+        <!-- Main layout -->
+        <main class="ip-main">
+            <div class="ip-layout">
+
+                <!-- Left: entity selector -->
+                <aside class="ip-card">
+                    <div class="ip-card-header">
+                        <div>
+                            <div class="ip-card-title">Choose Parameter Entity</div>
+                            <div class="ip-card-subtitle">
+                                Select which interior parameter table you want to manage.
+                            </div>
+                        </div>
+                        <div class="ip-badge-pill">
+                            <span>Scope: <strong>Interior · Client Requisition</strong></span>
+                        </div>
+                    </div>
+
+                    <div class="ip-card-body">
+                        <div class="ip-entity-list" id="entityList">
+                            <button type="button"
+                                    class="ip-entity-pill {{ $initialEntity === 'project_type' ? 'active' : '' }}"
+                                    data-entity="project_type">
+                                <span>
+                                    <span class="ip-entity-pill-dot"></span>
+                                    <span>Project Types</span>
+                                </span>
+                                <small>(cr_project_types)</small>
+                            </button>
+
+                            <button type="button"
+                                    class="ip-entity-pill {{ $initialEntity === 'project_subtype' ? 'active' : '' }}"
+                                    data-entity="project_subtype">
+                                <span>
+                                    <span class="ip-entity-pill-dot"></span>
+                                    <span>Project Sub-Types</span>
+                                </span>
+                                <small>(cr_project_subtypes)</small>
+                            </button>
+
+                            <button type="button"
+                                    class="ip-entity-pill {{ $initialEntity === 'space' ? 'active' : '' }}"
+                                    data-entity="space">
+                                <span>
+                                    <span class="ip-entity-pill-dot"></span>
+                                    <span>Spaces</span>
+                                </span>
+                                <small>(cr_spaces)</small>
+                            </button>
+
+                            <button type="button"
+                                    class="ip-entity-pill {{ $initialEntity === 'category' ? 'active' : '' }}"
+                                    data-entity="category">
+                                <span>
+                                    <span class="ip-entity-pill-dot"></span>
+                                    <span>Item Categories</span>
+                                </span>
+                                <small>(cr_item_categories)</small>
+                            </button>
+
+                            <button type="button"
+                                    class="ip-entity-pill {{ $initialEntity === 'subcategory' ? 'active' : '' }}"
+                                    data-entity="subcategory">
+                                <span>
+                                    <span class="ip-entity-pill-dot"></span>
+                                    <span>Item Sub-Categories</span>
+                                </span>
+                                <small>(cr_item_subcategories)</small>
+                            </button>
+
+                            <button type="button"
+                                    class="ip-entity-pill {{ $initialEntity === 'product' ? 'active' : '' }}"
+                                    data-entity="product">
+                                <span>
+                                    <span class="ip-entity-pill-dot"></span>
+                                    <span>Products</span>
+                                </span>
+                                <small>(cr_products)</small>
+                            </button>
+                        </div>
+
+                        <div class="mt-3">
+                            <div class="ip-help">
+                                In Blade you will:
+                                <br>• Populate lists from DB per entity.<br>
+                                • Click a record to load it into the unified form.<br>
+                                • Use the same page for create and edit.
+                            </div>
+                        </div>
+                    </div>
+                </aside>
+
+                <!-- Right: list + form -->
+                <section class="ip-card ip-card--soft">
+                    <div class="ip-card-header">
+                        <div>
+                            <div class="ip-card-title" id="formTitle">
+                                {{ $currentMeta['title'] }}
+                            </div>
+                            <div class="ip-card-subtitle" id="formSubtitle">
+                                {{ $currentMeta['subtitle'] }}
+                            </div>
+                        </div>
+                        <div class="ip-form-toolbar">
+                            <div class="ip-form-entity-label">
+                                Entity:
+                                <strong id="entityLabel">{{ $currentMeta['label'] }}</strong>
+                            </div>
+                            <div class="ip-form-mode-badge"
+                                 id="modeBadge"
+                                 data-mode="{{ $initialMode }}">
+                                <span class="ip-form-mode-dot"></span>
+                                <span id="modeText">
+                                    {{ $initialMode === 'edit' ? 'Edit mode' : 'Create mode' }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="ip-card-body">
+                        <!-- Alert bar for server messages -->
+                        <div id="ipAlert"
+                             class="ip-alert
+                                    @if($serverAlertType)
+                                        show {{ $serverAlertType === 'info' ? 'ip-alert-info' : 'ip-alert-error' }}
+                                    @endif">
+                            <span class="ip-alert-text" id="ipAlertText">
+                                {{ $serverAlertMessage }}
+                            </span>
+                            <button type="button"
+                                    class="ip-alert-close"
+                                    id="ipAlertClose"
+                                    aria-label="Close">×</button>
+                        </div>
+
+                        <div class="ip-main-grid">
+
+                            <!-- Existing records list -->
+                            <aside class="ip-list-panel">
+                                <div class="ip-record-toolbar">
+                                    <div class="ip-record-title">Existing Records</div>
+                                    <div class="ip-record-search">
+                                        <input type="text"
+                                               id="recordSearch"
+                                               placeholder="Search in current entity...">
+                                        <span class="ip-record-search-icon">🔍</span>
+                                    </div>
+                                </div>
+
+                                <div class="ip-record-sets" id="recordSets">
+                                    {{-- Project Types --}}
+                                    <div class="ip-record-set {{ $initialEntity === 'project_type' ? 'active' : '' }}"
+                                         data-entity="project_type">
+                                        @php $rows = $lists['project_type'] ?? collect(); @endphp
+                                        @if($rows->isEmpty())
+                                            <div class="ip-record-empty">No project types found.</div>
+                                        @else
+                                            <div class="ip-record-list">
+                                                @foreach($rows as $row)
+                                                    @php
+                                                        $thumb = $row->card_image_path
+                                                            ? asset('storage/' . $row->card_image_path)
+                                                            : null;
+                                                        $metaText = 'Code: ' . $row->code . ' · ' . ($row->is_active ? 'Active' : 'Inactive');
+                                                    @endphp
+                                                    <button type="button"
+                                                            class="ip-record-item"
+                                                            data-entity="project_type"
+                                                            data-id="{{ $row->id }}"
+                                                            data-code="{{ $row->code }}"
+                                                            data-name="{{ $row->name }}"
+                                                            data-description="{{ $row->description }}"
+                                                            data-is-active="{{ (int)$row->is_active }}"
+                                                            data-sort-order="{{ $row->sort_order }}"
+                                                            data-image-url="{{ $thumb }}">
+                                                        <div class="ip-record-item-left">
+                                                            <div class="ip-record-thumb">
+                                                                @if($thumb)
+                                                                    <img src="{{ $thumb }}" alt="{{ $row->name }}">
+                                                                @endif
+                                                            </div>
+                                                            <div class="ip-record-main">
+                                                                <div class="ip-record-main-title">{{ $row->name }}</div>
+                                                                <div class="ip-record-main-meta">{{ $metaText }}</div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="ip-record-right-pill">Type</div>
+                                                    </button>
+                                                @endforeach
+                                            </div>
+                                        @endif
+                                    </div>
+
+                                    {{-- Project Sub-Types --}}
+                                    <div class="ip-record-set {{ $initialEntity === 'project_subtype' ? 'active' : '' }}"
+                                         data-entity="project_subtype">
+                                        @php $rows = $lists['project_subtype'] ?? collect(); @endphp
+                                        @if($rows->isEmpty())
+                                            <div class="ip-record-empty">No project sub-types found.</div>
+                                        @else
+                                            <div class="ip-record-list">
+                                                @foreach($rows as $row)
+                                                    @php
+                                                        $thumb = $row->card_image_path
+                                                            ? asset('storage/' . $row->card_image_path)
+                                                            : null;
+                                                        $parentName = $projectTypeMap[$row->project_type_id] ?? '';
+                                                        $metaText   = 'Code: ' . $row->code . ($parentName ? ' · ' . $parentName : '');
+                                                    @endphp
+                                                    <button type="button"
+                                                            class="ip-record-item"
+                                                            data-entity="project_subtype"
+                                                            data-id="{{ $row->id }}"
+                                                            data-project-type-id="{{ $row->project_type_id }}"
+                                                            data-code="{{ $row->code }}"
+                                                            data-name="{{ $row->name }}"
+                                                            data-description="{{ $row->description }}"
+                                                            data-is-active="{{ (int)$row->is_active }}"
+                                                            data-sort-order="{{ $row->sort_order }}"
+                                                            data-image-url="{{ $thumb }}">
+                                                        <div class="ip-record-item-left">
+                                                            <div class="ip-record-thumb">
+                                                                @if($thumb)
+                                                                    <img src="{{ $thumb }}" alt="{{ $row->name }}">
+                                                                @endif
+                                                            </div>
+                                                            <div class="ip-record-main">
+                                                                <div class="ip-record-main-title">{{ $row->name }}</div>
+                                                                <div class="ip-record-main-meta">{{ $metaText }}</div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="ip-record-right-pill">Sub-Type</div>
+                                                    </button>
+                                                @endforeach
+                                            </div>
+                                        @endif
+                                    </div>
+
+                                    {{-- Spaces --}}
+                                    <div class="ip-record-set {{ $initialEntity === 'space' ? 'active' : '' }}"
+                                         data-entity="space">
+                                        @php $rows = $lists['space'] ?? collect(); @endphp
+                                        @if($rows->isEmpty())
+                                            <div class="ip-record-empty">No spaces found.</div>
+                                        @else
+                                            <div class="ip-record-list">
+                                                @foreach($rows as $row)
+                                                    @php
+                                                        $thumb = $row->card_image_path
+                                                            ? asset('storage/' . $row->card_image_path)
+                                                            : null;
+                                                        $parentName = $projectSubtypeMap[$row->project_subtype_id] ?? '';
+                                                        $metaText   = 'Code: ' . $row->code . ($parentName ? ' · ' . $parentName : '');
+                                                    @endphp
+                                                    <button type="button"
+                                                            class="ip-record-item"
+                                                            data-entity="space"
+                                                            data-id="{{ $row->id }}"
+                                                            data-project-subtype-id="{{ $row->project_subtype_id }}"
+                                                            data-code="{{ $row->code }}"
+                                                            data-name="{{ $row->name }}"
+                                                            data-description="{{ $row->description }}"
+                                                            data-default-quantity="{{ $row->default_quantity }}"
+                                                            data-default-area-sqft="{{ $row->default_area_sqft }}"
+                                                            data-is-active="{{ (int)$row->is_active }}"
+                                                            data-sort-order="{{ $row->sort_order }}"
+                                                            data-image-url="{{ $thumb }}">
+                                                        <div class="ip-record-item-left">
+                                                            <div class="ip-record-thumb">
+                                                                @if($thumb)
+                                                                    <img src="{{ $thumb }}" alt="{{ $row->name }}">
+                                                                @endif
+                                                            </div>
+                                                            <div class="ip-record-main">
+                                                                <div class="ip-record-main-title">{{ $row->name }}</div>
+                                                                <div class="ip-record-main-meta">{{ $metaText }}</div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="ip-record-right-pill">Space</div>
+                                                    </button>
+                                                @endforeach
+                                            </div>
+                                        @endif
+                                    </div>
+
+                                    {{-- Item Categories --}}
+                                    <div class="ip-record-set {{ $initialEntity === 'category' ? 'active' : '' }}"
+                                         data-entity="category">
+                                        @php $rows = $lists['category'] ?? collect(); @endphp
+                                        @if($rows->isEmpty())
+                                            <div class="ip-record-empty">No item categories found.</div>
+                                        @else
+                                            <div class="ip-record-list">
+                                                @foreach($rows as $row)
+                                                    @php
+                                                        $thumb = $row->card_image_path
+                                                            ? asset('storage/' . $row->card_image_path)
+                                                            : null;
+                                                        $metaText = 'Code: ' . $row->code . ' · ' . ($row->is_active ? 'Active' : 'Inactive');
+                                                    @endphp
+                                                    <button type="button"
+                                                            class="ip-record-item"
+                                                            data-entity="category"
+                                                            data-id="{{ $row->id }}"
+                                                            data-code="{{ $row->code }}"
+                                                            data-name="{{ $row->name }}"
+                                                            data-description="{{ $row->description }}"
+                                                            data-is-active="{{ (int)$row->is_active }}"
+                                                            data-sort-order="{{ $row->sort_order }}"
+                                                            data-image-url="{{ $thumb }}">
+                                                        <div class="ip-record-item-left">
+                                                            <div class="ip-record-thumb">
+                                                                @if($thumb)
+                                                                    <img src="{{ $thumb }}" alt="{{ $row->name }}">
+                                                                @endif
+                                                            </div>
+                                                            <div class="ip-record-main">
+                                                                <div class="ip-record-main-title">{{ $row->name }}</div>
+                                                                <div class="ip-record-main-meta">{{ $metaText }}</div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="ip-record-right-pill">Category</div>
+                                                    </button>
+                                                @endforeach
+                                            </div>
+                                        @endif
+                                    </div>
+
+                                    {{-- Item Sub-Categories --}}
+                                    <div class="ip-record-set {{ $initialEntity === 'subcategory' ? 'active' : '' }}"
+                                         data-entity="subcategory">
+                                        @php $rows = $lists['subcategory'] ?? collect(); @endphp
+                                        @if($rows->isEmpty())
+                                            <div class="ip-record-empty">No item sub-categories found.</div>
+                                        @else
+                                            <div class="ip-record-list">
+                                                @foreach($rows as $row)
+                                                    @php
+                                                        $thumb = $row->card_image_path
+                                                            ? asset('storage/' . $row->card_image_path)
+                                                            : null;
+                                                        $catName = $categoryMap[$row->category_id] ?? '';
+                                                        $metaText = 'Code: ' . $row->code . ($catName ? ' · ' . $catName : '');
+                                                    @endphp
+                                                    <button type="button"
+                                                            class="ip-record-item"
+                                                            data-entity="subcategory"
+                                                            data-id="{{ $row->id }}"
+                                                            data-category-id="{{ $row->category_id }}"
+                                                            data-code="{{ $row->code }}"
+                                                            data-name="{{ $row->name }}"
+                                                            data-description="{{ $row->description }}"
+                                                            data-is-active="{{ (int)$row->is_active }}"
+                                                            data-sort-order="{{ $row->sort_order }}"
+                                                            data-image-url="{{ $thumb }}">
+                                                        <div class="ip-record-item-left">
+                                                            <div class="ip-record-thumb">
+                                                                @if($thumb)
+                                                                    <img src="{{ $thumb }}" alt="{{ $row->name }}">
+                                                                @endif
+                                                            </div>
+                                                            <div class="ip-record-main">
+                                                                <div class="ip-record-main-title">{{ $row->name }}</div>
+                                                                <div class="ip-record-main-meta">{{ $metaText }}</div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="ip-record-right-pill">Sub-Category</div>
+                                                    </button>
+                                                @endforeach
+                                            </div>
+                                        @endif
+                                    </div>
+
+                                    {{-- Products --}}
+                                    <div class="ip-record-set {{ $initialEntity === 'product' ? 'active' : '' }}"
+                                         data-entity="product">
+                                        @php $rows = $lists['product'] ?? collect(); @endphp
+                                        @if($rows->isEmpty())
+                                            <div class="ip-record-empty">No products found.</div>
+                                        @else
+                                            <div class="ip-record-list">
+                                                @foreach($rows as $row)
+                                                    @php
+                                                        $thumb = $row->main_image_url
+                                                            ? asset('storage/' . $row->main_image_url)
+                                                            : null;
+                                                        $subName = $lists['subcategory']->firstWhere('id', $row->subcategory_id)->name
+                                                            ?? '';
+                                                        $metaText = 'SKU: ' . $row->sku
+                                                            . ($row->default_tag ? ' · ' . ucfirst($row->default_tag) : '');
+                                                    @endphp
+                                                    <button type="button"
+                                                            class="ip-record-item"
+                                                            data-entity="product"
+                                                            data-id="{{ $row->id }}"
+                                                            data-subcategory-id="{{ $row->subcategory_id }}"
+                                                            data-sku="{{ $row->sku }}"
+                                                            data-name="{{ $row->name }}"
+                                                            data-short-description="{{ $row->short_description }}"
+                                                            data-specification="{{ $row->specification }}"
+                                                            data-origin-country="{{ $row->origin_country }}"
+                                                            data-default-tag="{{ $row->default_tag }}"
+                                                            data-default-qty="{{ $row->default_qty }}"
+                                                            data-is-active="{{ (int)$row->is_active }}"
+                                                            data-sort-order="{{ $row->sort_order }}"
+                                                            data-image-url="{{ $thumb }}">
+                                                        <div class="ip-record-item-left">
+                                                            <div class="ip-record-thumb">
+                                                                @if($thumb)
+                                                                    <img src="{{ $thumb }}" alt="{{ $row->name }}">
+                                                                @endif
+                                                            </div>
+                                                            <div class="ip-record-main">
+                                                                <div class="ip-record-main-title">{{ $row->name }}</div>
+                                                                <div class="ip-record-main-meta">{{ $metaText }}</div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="ip-record-right-pill">Product</div>
+                                                    </button>
+                                                @endforeach
+                                            </div>
+                                        @endif
+                                    </div>
+
+                                </div>
+                            </aside>
+
+                            <!-- Unified form panel -->
+                            <section class="ip-form-panel">
+                                <form id="ipParamForm"
+                                      method="POST"
+                                      action="{{ $baseUrl . '/' . $initialEntity }}"
+                                      novalidate
+                                      enctype="multipart/form-data">
+                                    @csrf
+                                    <input type="hidden" name="_method" id="formMethod" value="POST">
+                                    <input type="hidden" id="recordId" name="id" value="{{ old('id') }}">
+                                    <input type="hidden" id="entityInput" name="_entity" value="{{ $initialEntity }}">
+
+                                    <!-- Project Types -->
+                                    <div class="ip-entity-form {{ $initialEntity === 'project_type' ? 'active' : '' }}"
+                                         data-entity="project_type">
+                                        <div class="ip-form-grid">
+                                            <div class="ip-form-group">
+                                                <label class="ip-label" for="pt_code">
+                                                    Code <span class="required">*</span>
+                                                </label>
+                                                <input type="text"
+                                                       id="pt_code"
+                                                       name="code"
+                                                       class="ip-field"
+                                                       placeholder="e.g., RES, COM, HOS"
+                                                       value="{{ old('code') }}">
+                                                <div class="ip-help">Unique short code for the project type.</div>
+                                            </div>
+
+                                            <div class="ip-form-group">
+                                                <label class="ip-label" for="pt_name">
+                                                    Name <span class="required">*</span>
+                                                </label>
+                                                <input type="text"
+                                                       id="pt_name"
+                                                       name="name"
+                                                       class="ip-field"
+                                                       placeholder="e.g., Residential"
+                                                       value="{{ old('name') }}">
+                                                <div class="ip-help">Human readable name displayed in UI.</div>
+                                            </div>
+
+                                            <div class="ip-form-group">
+                                                <label class="ip-label" for="pt_description">Description</label>
+                                                <textarea id="pt_description"
+                                                          name="description"
+                                                          class="ip-textarea"
+                                                          placeholder="Describe where this project type is used.">{{ old('description') }}</textarea>
+                                            </div>
+
+                                            <div class="ip-form-group">
+                                                <label class="ip-label">Active?</label>
+                                                <div class="ip-toggle-row">
+                                                    <label class="ip-toggle">
+                                                        <input type="checkbox"
+                                                               id="pt_is_active"
+                                                               name="is_active"
+                                                               @if(old('is_active', '1')) checked @endif>
+                                                        <span class="ip-toggle-track">
+                                                            <span class="ip-toggle-knob"></span>
+                                                        </span>
+                                                    </label>
+                                                    <span class="ip-help">If off, this type will be hidden from selection.</span>
+                                                </div>
+                                            </div>
+
+                                            <div class="ip-form-group">
+                                                <label class="ip-label" for="pt_sort_order">Sort Order</label>
+                                                <input type="number"
+                                                       id="pt_sort_order"
+                                                       name="sort_order"
+                                                       class="ip-field"
+                                                       placeholder="e.g., 1, 2, 3"
+                                                       value="{{ old('sort_order') }}">
+                                                <div class="ip-help">Lower number appears earlier in dropdowns/cards.</div>
+                                            </div>
+
+                                            <div class="ip-form-group">
+                                                <label class="ip-label">Project Type Image</label>
+                                                <div class="ip-image-wrapper">
+                                                    <div class="ip-image-preview" id="pt_image_preview">
+                                                        <div class="ip-image-placeholder">
+                                                            No image selected yet. A clean, thematic thumbnail works best.
+                                                        </div>
+                                                    </div>
+                                                    <label class="ip-file-input">
+                                                        <span class="icon">⤓</span>
+                                                        <span>Upload image ({{ strtoupper(implode('/', $allowedMimes)) }}, max {{ (int)($maxKB / 1024) }} MB)</span>
+                                                        <input type="file" id="pt_image" name="card_image_path">
+                                                    </label>
+                                                    <div class="ip-file-meta">
+                                                        In Laravel, map to:
+                                                        <strong>storage/app/public/{country}/{company-slug}/parameter/interior/project-type</strong>
+                                                        and expose via <code>public/storage</code>.
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Project Sub-Types -->
+                                    <div class="ip-entity-form {{ $initialEntity === 'project_subtype' ? 'active' : '' }}"
+                                         data-entity="project_subtype">
+                                        <div class="ip-form-grid">
+                                            <div class="ip-form-group">
+                                                <label class="ip-label" for="pst_project_type_id">
+                                                    Project Type <span class="required">*</span>
+                                                </label>
+                                                <select id="pst_project_type_id"
+                                                        name="project_type_id"
+                                                        class="ip-select">
+                                                    <option value="">Select project type</option>
+                                                    @foreach($projectTypes as $pt)
+                                                        <option value="{{ $pt->id }}"
+                                                            {{ (string)old('project_type_id') === (string)$pt->id ? 'selected' : '' }}>
+                                                            {{ $pt->name }}
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                                <div class="ip-help">Bind from <code>cr_project_types</code> in Blade.</div>
+                                            </div>
+
+                                            <div class="ip-form-group">
+                                                <label class="ip-label" for="pst_code">
+                                                    Code <span class="required">*</span>
+                                                </label>
+                                                <input type="text"
+                                                       id="pst_code"
+                                                       name="code"
+                                                       class="ip-field"
+                                                       placeholder="e.g., RES_DPX"
+                                                       value="{{ old('code') }}">
+                                                <div class="ip-help">Unique code per sub-type (e.g., RES_APT, RES_DPX).</div>
+                                            </div>
+
+                                            <div class="ip-form-group">
+                                                <label class="ip-label" for="pst_name">
+                                                    Name <span class="required">*</span>
+                                                </label>
+                                                <input type="text"
+                                                       id="pst_name"
+                                                       name="name"
+                                                       class="ip-field"
+                                                       placeholder="e.g., Duplex"
+                                                       value="{{ old('name') }}">
+                                                <div class="ip-help">Name displayed on cards and dropdowns.</div>
+                                            </div>
+
+                                            <div class="ip-form-group">
+                                                <label class="ip-label" for="pst_description">Description</label>
+                                                <textarea id="pst_description"
+                                                          name="description"
+                                                          class="ip-textarea"
+                                                          placeholder="Optional description for this sub-type.">{{ old('description') }}</textarea>
+                                            </div>
+
+                                            <div class="ip-form-group">
+                                                <label class="ip-label">Active?</label>
+                                                <div class="ip-toggle-row">
+                                                    <label class="ip-toggle">
+                                                        <input type="checkbox"
+                                                               id="pst_is_active"
+                                                               name="is_active"
+                                                               @if(old('is_active', '1')) checked @endif>
+                                                        <span class="ip-toggle-track">
+                                                            <span class="ip-toggle-knob"></span>
+                                                        </span>
+                                                    </label>
+                                                    <span class="ip-help">Disabled sub-types will not appear in Step-1.</span>
+                                                </div>
+                                            </div>
+
+                                            <div class="ip-form-group">
+                                                <label class="ip-label" for="pst_sort_order">Sort Order</label>
+                                                <input type="number"
+                                                       id="pst_sort_order"
+                                                       name="sort_order"
+                                                       class="ip-field"
+                                                       placeholder="e.g., 1, 2, 3"
+                                                       value="{{ old('sort_order') }}">
+                                            </div>
+
+                                            <div class="ip-form-group">
+                                                <label class="ip-label">Sub-Type Image</label>
+                                                <div class="ip-image-wrapper">
+                                                    <div class="ip-image-preview" id="pst_image_preview">
+                                                        <div class="ip-image-placeholder">
+                                                            Sub-type illustration used in project selection cards.
+                                                        </div>
+                                                    </div>
+                                                    <label class="ip-file-input">
+                                                        <span class="icon">⤓</span>
+                                                        <span>Upload image ({{ strtoupper(implode('/', $allowedMimes)) }}, max {{ (int)($maxKB / 1024) }} MB)</span>
+                                                        <input type="file" id="pst_image" name="card_image_path">
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Spaces -->
+                                    <div class="ip-entity-form {{ $initialEntity === 'space' ? 'active' : '' }}"
+                                         data-entity="space">
+                                        <div class="ip-form-grid">
+                                            <div class="ip-form-group">
+                                                <label class="ip-label" for="sp_project_subtype_id">
+                                                    Project Sub-Type <span class="required">*</span>
+                                                </label>
+                                                <select id="sp_project_subtype_id"
+                                                        name="project_subtype_id"
+                                                        class="ip-select">
+                                                    <option value="">Select sub-type</option>
+                                                    @foreach($projectSubtypes as $pst)
+                                                        <option value="{{ $pst->id }}"
+                                                            {{ (string)old('project_subtype_id') === (string)$pst->id ? 'selected' : '' }}>
+                                                            {{ $pst->name }}
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                                <div class="ip-help">Bind from <code>cr_project_subtypes</code>.</div>
+                                            </div>
+
+                                            <div class="ip-form-group">
+                                                <label class="ip-label" for="sp_code">
+                                                    Code <span class="required">*</span>
+                                                </label>
+                                                <input type="text"
+                                                       id="sp_code"
+                                                       name="code"
+                                                       class="ip-field"
+                                                       placeholder="e.g., MASTER_BED"
+                                                       value="{{ old('code') }}">
+                                            </div>
+
+                                            <div class="ip-form-group">
+                                                <label class="ip-label" for="sp_name">
+                                                    Name <span class="required">*</span>
+                                                </label>
+                                                <input type="text"
+                                                       id="sp_name"
+                                                       name="name"
+                                                       class="ip-field"
+                                                       placeholder="e.g., Master Bed Room"
+                                                       value="{{ old('name') }}">
+                                            </div>
+
+                                            <div class="ip-form-group">
+                                                <label class="ip-label" for="sp_description">Description</label>
+                                                <textarea id="sp_description"
+                                                          name="description"
+                                                          class="ip-textarea"
+                                                          placeholder="Optional note about this space.">{{ old('description') }}</textarea>
+                                            </div>
+
+                                            <div class="ip-form-group">
+                                                <label class="ip-label" for="sp_default_quantity">Default Quantity</label>
+                                                <input type="number"
+                                                       id="sp_default_quantity"
+                                                       name="default_quantity"
+                                                       class="ip-field"
+                                                       placeholder="e.g., 1"
+                                                       value="{{ old('default_quantity') }}">
+                                                <div class="ip-help">Suggest default number of this space in Step-1.</div>
+                                            </div>
+
+                                            <div class="ip-form-group">
+                                                <label class="ip-label" for="sp_default_area_sqft">Default Area (SQFT)</label>
+                                                <input type="number"
+                                                       step="0.01"
+                                                       id="sp_default_area_sqft"
+                                                       name="default_area_sqft"
+                                                       class="ip-field"
+                                                       placeholder="e.g., 220.00"
+                                                       value="{{ old('default_area_sqft') }}">
+                                            </div>
+
+                                            <div class="ip-form-group">
+                                                <label class="ip-label">Active?</label>
+                                                <div class="ip-toggle-row">
+                                                    <label class="ip-toggle">
+                                                        <input type="checkbox"
+                                                               id="sp_is_active"
+                                                               name="is_active"
+                                                               @if(old('is_active', '1')) checked @endif>
+                                                        <span class="ip-toggle-track">
+                                                            <span class="ip-toggle-knob"></span>
+                                                        </span>
+                                                    </label>
+                                                    <span class="ip-help">If off, this space will not appear in Step-1/2.</span>
+                                                </div>
+                                            </div>
+
+                                            <div class="ip-form-group">
+                                                <label class="ip-label" for="sp_sort_order">Sort Order</label>
+                                                <input type="number"
+                                                       id="sp_sort_order"
+                                                       name="sort_order"
+                                                       class="ip-field"
+                                                       placeholder="e.g., 1, 2, 3"
+                                                       value="{{ old('sort_order') }}">
+                                            </div>
+
+                                            <div class="ip-form-group">
+                                                <label class="ip-label">Space Card Image</label>
+                                                <div class="ip-image-wrapper">
+                                                    <div class="ip-image-preview" id="sp_image_preview">
+                                                        <div class="ip-image-placeholder">
+                                                            Used in “Spaces in this Requisition” pills/cards.
+                                                        </div>
+                                                    </div>
+                                                    <label class="ip-file-input">
+                                                        <span class="icon">⤓</span>
+                                                        <span>Upload card image ({{ strtoupper(implode('/', $allowedMimes)) }}, max {{ (int)($maxKB / 1024) }} MB)</span>
+                                                        <input type="file" id="sp_image" name="card_image_path">
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Item Categories -->
+                                    <div class="ip-entity-form {{ $initialEntity === 'category' ? 'active' : '' }}"
+                                         data-entity="category">
+                                        <div class="ip-form-grid">
+                                            <div class="ip-form-group">
+                                                <label class="ip-label" for="cat_code">
+                                                    Code <span class="required">*</span>
+                                                </label>
+                                                <input type="text"
+                                                       id="cat_code"
+                                                       name="code"
+                                                       class="ip-field"
+                                                       placeholder="e.g., FURN, LIGHT"
+                                                       value="{{ old('code') }}">
+                                            </div>
+
+                                            <div class="ip-form-group">
+                                                <label class="ip-label" for="cat_name">
+                                                    Name <span class="required">*</span>
+                                                </label>
+                                                <input type="text"
+                                                       id="cat_name"
+                                                       name="name"
+                                                       class="ip-field"
+                                                       placeholder="e.g., Furniture"
+                                                       value="{{ old('name') }}">
+                                            </div>
+
+                                            <div class="ip-form-group">
+                                                <label class="ip-label" for="cat_description">Description</label>
+                                                <textarea id="cat_description"
+                                                          name="description"
+                                                          class="ip-textarea"
+                                                          placeholder="Describe this item category.">{{ old('description') }}</textarea>
+                                            </div>
+
+                                            <div class="ip-form-group">
+                                                <label class="ip-label">Active?</label>
+                                                <div class="ip-toggle-row">
+                                                    <label class="ip-toggle">
+                                                        <input type="checkbox"
+                                                               id="cat_is_active"
+                                                               name="is_active"
+                                                               @if(old('is_active', '1')) checked @endif>
+                                                        <span class="ip-toggle-track">
+                                                            <span class="ip-toggle-knob"></span>
+                                                        </span>
+                                                    </label>
+                                                    <span class="ip-help">Control visibility in Step-2 “Item Categories”.</span>
+                                                </div>
+                                            </div>
+
+                                            <div class="ip-form-group">
+                                                <label class="ip-label" for="cat_sort_order">Sort Order</label>
+                                                <input type="number"
+                                                       id="cat_sort_order"
+                                                       name="sort_order"
+                                                       class="ip-field"
+                                                       placeholder="e.g., 1, 2, 3"
+                                                       value="{{ old('sort_order') }}">
+                                            </div>
+
+                                            <div class="ip-form-group">
+                                                <label class="ip-label">Category Image</label>
+                                                <div class="ip-image-wrapper">
+                                                    <div class="ip-image-preview" id="cat_image_preview">
+                                                        <div class="ip-image-placeholder">
+                                                            Thumbnail shown in Item Category cards in Step-2.
+                                                        </div>
+                                                    </div>
+                                                    <label class="ip-file-input">
+                                                        <span class="icon">⤓</span>
+                                                        <span>Upload image ({{ strtoupper(implode('/', $allowedMimes)) }}, max {{ (int)($maxKB / 1024) }} MB)</span>
+                                                        <input type="file" id="cat_image" name="card_image_path">
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Item Sub-Categories -->
+                                    <div class="ip-entity-form {{ $initialEntity === 'subcategory' ? 'active' : '' }}"
+                                         data-entity="subcategory">
+                                        <div class="ip-form-grid">
+                                            <div class="ip-form-group">
+                                                <label class="ip-label" for="sub_cat_id">
+                                                    Category <span class="required">*</span>
+                                                </label>
+                                                <select id="sub_cat_id"
+                                                        name="category_id"
+                                                        class="ip-select">
+                                                    <option value="">Select category</option>
+                                                    @foreach($categories as $cat)
+                                                        <option value="{{ $cat->id }}"
+                                                            {{ (string)old('category_id') === (string)$cat->id ? 'selected' : '' }}>
+                                                            {{ $cat->name }}
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                                <div class="ip-help">Bind from <code>cr_item_categories</code>.</div>
+                                            </div>
+
+                                            <div class="ip-form-group">
+                                                <label class="ip-label" for="sub_code">
+                                                    Code <span class="required">*</span>
+                                                </label>
+                                                <input type="text"
+                                                       id="sub_code"
+                                                       name="code"
+                                                       class="ip-field"
+                                                       placeholder="e.g., FURN_DBED"
+                                                       value="{{ old('code') }}">
+                                            </div>
+
+                                            <div class="ip-form-group">
+                                                <label class="ip-label" for="sub_name">
+                                                    Name <span class="required">*</span>
+                                                </label>
+                                                <input type="text"
+                                                       id="sub_name"
+                                                       name="name"
+                                                       class="ip-field"
+                                                       placeholder="e.g., Double Person Bed"
+                                                       value="{{ old('name') }}">
+                                            </div>
+
+                                            <div class="ip-form-group">
+                                                <label class="ip-label" for="sub_description">Description</label>
+                                                <textarea id="sub_description"
+                                                          name="description"
+                                                          class="ip-textarea"
+                                                          placeholder="Optional description for the sub-category.">{{ old('description') }}</textarea>
+                                            </div>
+
+                                            <div class="ip-form-group">
+                                                <label class="ip-label">Active?</label>
+                                                <div class="ip-toggle-row">
+                                                    <label class="ip-toggle">
+                                                        <input type="checkbox"
+                                                               id="sub_is_active"
+                                                               name="is_active"
+                                                               @if(old('is_active', '1')) checked @endif>
+                                                        <span class="ip-toggle-track">
+                                                            <span class="ip-toggle-knob"></span>
+                                                        </span>
+                                                    </label>
+                                                    <span class="ip-help">Controls availability inside category slider.</span>
+                                                </div>
+                                            </div>
+
+                                            <div class="ip-form-group">
+                                                <label class="ip-label" for="sub_sort_order">Sort Order</label>
+                                                <input type="number"
+                                                       id="sub_sort_order"
+                                                       name="sort_order"
+                                                       class="ip-field"
+                                                       placeholder="e.g., 1, 2, 3"
+                                                       value="{{ old('sort_order') }}">
+                                            </div>
+
+                                            <div class="ip-form-group">
+                                                <label class="ip-label">Sub-Category Image</label>
+                                                <div class="ip-image-wrapper">
+                                                    <div class="ip-image-preview" id="sub_image_preview">
+                                                        <div class="ip-image-placeholder">
+                                                            Used in “Sub-Categories” slider for the selected category.
+                                                        </div>
+                                                    </div>
+                                                    <label class="ip-file-input">
+                                                        <span class="icon">⤓</span>
+                                                        <span>Upload image ({{ strtoupper(implode('/', $allowedMimes)) }}, max {{ (int)($maxKB / 1024) }} MB)</span>
+                                                        <input type="file" id="sub_image" name="card_image_path">
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Products -->
+                                    <div class="ip-entity-form {{ $initialEntity === 'product' ? 'active' : '' }}"
+                                         data-entity="product">
+                                        <div class="ip-form-grid">
+                                            <div class="ip-form-group">
+                                                <label class="ip-label" for="prod_subcategory_id">
+                                                    Sub-Category <span class="required">*</span>
+                                                </label>
+                                                <select id="prod_subcategory_id"
+                                                        name="subcategory_id"
+                                                        class="ip-select">
+                                                    <option value="">Select sub-category</option>
+                                                    @foreach($subcategories as $sub)
+                                                        <option value="{{ $sub->id }}"
+                                                            {{ (string)old('subcategory_id') === (string)$sub->id ? 'selected' : '' }}>
+                                                            {{ $sub->name }}
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                                <div class="ip-help">Bind from <code>cr_item_subcategories</code>.</div>
+                                            </div>
+
+                                            <div class="ip-form-group">
+                                                <label class="ip-label" for="prod_sku">
+                                                    SKU <span class="required">*</span>
+                                                </label>
+                                                <input type="text"
+                                                       id="prod_sku"
+                                                       name="sku"
+                                                       class="ip-field"
+                                                       placeholder="e.g., DB-AVN-180x200"
+                                                       value="{{ old('sku') }}">
+                                            </div>
+
+                                            <div class="ip-form-group">
+                                                <label class="ip-label" for="prod_name">
+                                                    Name <span class="required">*</span>
+                                                </label>
+                                                <input type="text"
+                                                       id="prod_name"
+                                                       name="name"
+                                                       class="ip-field"
+                                                       placeholder="e.g., Avenue Solid Wood Double Bed"
+                                                       value="{{ old('name') }}">
+                                            </div>
+
+                                            <div class="ip-form-group">
+                                                <label class="ip-label" for="prod_short_description">
+                                                    Short Description
+                                                </label>
+                                                <textarea id="prod_short_description"
+                                                          name="short_description"
+                                                          class="ip-textarea"
+                                                          placeholder="1–2 line summary shown in product card.">{{ old('short_description') }}</textarea>
+                                            </div>
+
+                                            <div class="ip-form-group">
+                                                <label class="ip-label" for="prod_spec">
+                                                    Specification
+                                                </label>
+                                                <textarea id="prod_spec"
+                                                          name="specification"
+                                                          class="ip-textarea"
+                                                          placeholder="Detailed specs: materials, sizes, finishes, etc.">{{ old('specification') }}</textarea>
+                                            </div>
+
+                                            <div class="ip-form-group">
+                                                <label class="ip-label" for="prod_origin_country">
+                                                    Origin Country
+                                                </label>
+                                                <input type="text"
+                                                       id="prod_origin_country"
+                                                       name="origin_country"
+                                                       class="ip-field"
+                                                       placeholder="e.g., Malaysia, Turkey, Bangladesh"
+                                                       value="{{ old('origin_country') }}">
+                                            </div>
+
+                                            <div class="ip-form-group">
+                                                <label class="ip-label" for="prod_default_tag">
+                                                    Default Tag
+                                                </label>
+                                                <select id="prod_default_tag"
+                                                        name="default_tag"
+                                                        class="ip-select">
+                                                    <option value="">None</option>
+                                                    <option value="preferred" {{ old('default_tag') === 'preferred' ? 'selected' : '' }}>Preferred</option>
+                                                    <option value="standard"  {{ old('default_tag') === 'standard'  ? 'selected' : '' }}>Standard</option>
+                                                    <option value="value"     {{ old('default_tag') === 'value'     ? 'selected' : '' }}>Value</option>
+                                                    <option value="premium"   {{ old('default_tag') === 'premium'   ? 'selected' : '' }}>Premium</option>
+                                                </select>
+                                                <div class="ip-help">Shown as pill in product card in Step-2.</div>
+                                            </div>
+
+                                            <div class="ip-form-group">
+                                                <label class="ip-label" for="prod_default_qty">
+                                                    Default Quantity
+                                                </label>
+                                                <input type="number"
+                                                       id="prod_default_qty"
+                                                       name="default_qty"
+                                                       class="ip-field"
+                                                       placeholder="e.g., 1"
+                                                       value="{{ old('default_qty') }}">
+                                            </div>
+
+                                            <div class="ip-form-group">
+                                                <label class="ip-label">Active?</label>
+                                                <div class="ip-toggle-row">
+                                                    <label class="ip-toggle">
+                                                        <input type="checkbox"
+                                                               id="prod_is_active"
+                                                               name="is_active"
+                                                               @if(old('is_active', '1')) checked @endif>
+                                                        <span class="ip-toggle-track">
+                                                            <span class="ip-toggle-knob"></span>
+                                                        </span>
+                                                    </label>
+                                                    <span class="ip-help">Inactive products will be hidden from selection.</span>
+                                                </div>
+                                            </div>
+
+                                            <div class="ip-form-group">
+                                                <label class="ip-label" for="prod_sort_order">
+                                                    Sort Order
+                                                </label>
+                                                <input type="number"
+                                                       id="prod_sort_order"
+                                                       name="sort_order"
+                                                       class="ip-field"
+                                                       placeholder="e.g., 1, 2, 3"
+                                                       value="{{ old('sort_order') }}">
+                                            </div>
+
+                                            <div class="ip-form-group">
+                                                <label class="ip-label">Product Main Image</label>
+                                                <div class="ip-image-wrapper">
+                                                    <div class="ip-image-preview" id="prod_image_preview">
+                                                        <div class="ip-image-placeholder">
+                                                            Used as hero image in the Product cards slider.
+                                                        </div>
+                                                    </div>
+                                                    <label class="ip-file-input">
+                                                        <span class="icon">⤓</span>
+                                                        <span>Upload image ({{ strtoupper(implode('/', $allowedMimes)) }}, max {{ (int)($maxKB / 1024) }} MB)</span>
+                                                        <input type="file" id="prod_image" name="main_image_url">
+                                                    </label>
+                                                    <div class="ip-file-meta">
+                                                        Map to relative path inside
+                                                        <strong>parameter/interior/products</strong> folder.
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Common footer actions -->
+                                    <div class="ip-footer-actions">
+                                        <button type="button"
+                                                class="ip-btn ip-btn-ghost"
+                                                id="btnSwitchMode">
+                                            <span class="ip-btn-icon">⇄</span>
+                                            <span>Toggle Create / Edit</span>
+                                        </button>
+
+                                        <button type="button"
+                                                class="ip-btn ip-btn-danger d-none"
+                                                id="btnDelete">
+                                            <span class="ip-btn-icon ip-btn-icon--danger">🗑</span>
+                                            <span>Delete Record</span>
+                                        </button>
+
+                                        <button type="reset"
+                                                class="ip-btn ip-btn-secondary"
+                                                id="btnClearForm">
+                                            <span>Clear Form (front-end only)</span>
+                                        </button>
+
+                                        <button type="submit"
+                                                class="ip-btn ip-btn-primary">
+                                            <span class="ip-btn-icon">✓</span>
+                                            <span id="submitLabel">
+                                                {{ $initialMode === 'edit' ? 'Update Parameter' : 'Save Parameter' }}
+                                            </span>
+                                        </button>
+                                    </div>
+                                </form>
+                            </section>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+</div>
+@endsection
+
+@push('scripts')
+<script>
+(function () {
+    var configEl      = document.getElementById('ipConfig');
+    var baseUrl       = configEl ? configEl.getAttribute('data-base-url') || '' : '';
+    var initialEntity = configEl ? configEl.getAttribute('data-initial-entity') || 'project_type' : 'project_type';
+    var initialMode   = configEl ? configEl.getAttribute('data-initial-mode') || 'create' : 'create';
+
+    var csrfMeta  = document.querySelector('meta[name="csrf-token"]');
+    var csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
+
+    var entityPills  = document.querySelectorAll('.ip-entity-pill');
+    var entityForms  = document.querySelectorAll('.ip-entity-form');
+    var recordSets   = document.querySelectorAll('.ip-record-set');
+    var entityLabel  = document.getElementById('entityLabel');
+    var formTitle    = document.getElementById('formTitle');
+    var formSubtitle = document.getElementById('formSubtitle');
+
+    var modeBadge    = document.getElementById('modeBadge');
+    var modeText     = document.getElementById('modeText');
+    var submitLabel  = document.getElementById('submitLabel');
+    var btnSwitchMode= document.getElementById('btnSwitchMode');
+    var recordId     = document.getElementById('recordId');
+    var entityInput  = document.getElementById('entityInput');
+    var btnDelete    = document.getElementById('btnDelete');
+    var formMethod   = document.getElementById('formMethod');
+    var ipForm       = document.getElementById('ipParamForm');
+
+    var ipAlert      = document.getElementById('ipAlert');
+    var ipAlertText  = document.getElementById('ipAlertText');
+    var ipAlertClose = document.getElementById('ipAlertClose');
+
+    var recordSearch = document.getElementById('recordSearch');
+
+    var currentEntity = initialEntity;
+
+    var entityMeta = {
+        project_type: {
+            label: 'Project Types',
+            title: 'Project Types · Create / Edit',
+            subtitle: 'Maintain top-level interior project types like Residential, Commercial, Hospitality.'
+        },
+        project_subtype: {
+            label: 'Project Sub-Types',
+            title: 'Project Sub-Types · Create / Edit',
+            subtitle: 'Configure building/unit patterns such as Apartment, Duplex, Villa, Office.'
+        },
+        space: {
+            label: 'Spaces',
+            title: 'Spaces · Create / Edit',
+            subtitle: 'Define spaces inside a project (Master Bed, Living, Dining, Kitchen, etc.).'
+        },
+        category: {
+            label: 'Item Categories',
+            title: 'Item Categories · Create / Edit',
+            subtitle: 'Manage parent categories like Furniture, Lighting, Curtains & Fabrics.'
+        },
+        subcategory: {
+            label: 'Item Sub-Categories',
+            title: 'Item Sub-Categories · Create / Edit',
+            subtitle: 'Fine-tune sub-categories like Double Bed, Wardrobe, Study Desk, etc.'
+        },
+        product: {
+            label: 'Products',
+            title: 'Products · Create / Edit',
+            subtitle: 'Maintain a detailed, reusable product library to attach in Requisitions.'
+        }
+    };
+
+    function showAlert(type, message) {
+        if (!ipAlert || !ipAlertText) return;
+        ipAlert.classList.remove('ip-alert-error', 'ip-alert-info', 'show');
+
+        if (type === 'info') {
+            ipAlert.classList.add('ip-alert-info');
+        } else {
+            ipAlert.classList.add('ip-alert-error');
+        }
+
+        ipAlertText.textContent = message || '';
+        ipAlert.classList.add('show');
+    }
+
+    function hideAlert() {
+        if (!ipAlert) return;
+        ipAlert.classList.remove('show');
+    }
+
+    if (ipAlertClose) {
+        ipAlertClose.addEventListener('click', hideAlert);
+    }
+
+    function updateFormAction() {
+        if (!ipForm || !formMethod) return;
+        var mode   = modeBadge ? (modeBadge.dataset.mode || 'create') : 'create';
+        var entity = currentEntity || 'project_type';
+        var id     = recordId ? (recordId.value || '') : '';
+
+        entityInput.value = entity;
+
+        if (mode === 'edit' && id && baseUrl) {
+            ipForm.action    = baseUrl + '/' + encodeURIComponent(entity) + '/' + encodeURIComponent(id);
+            formMethod.value = 'PUT';
+        } else {
+            ipForm.action    = baseUrl + '/' + encodeURIComponent(entity);
+            formMethod.value = 'POST';
+        }
+    }
+
+    function setMode(mode) {
+        if (!modeBadge || !modeText || !submitLabel) return;
+
+        modeBadge.dataset.mode = mode;
+
+        if (mode === 'edit') {
+            modeText.textContent   = 'Edit mode';
+            submitLabel.textContent= 'Update Parameter';
+            if (btnDelete) btnDelete.classList.remove('d-none');
+        } else {
+            modeText.textContent   = 'Create mode';
+            submitLabel.textContent= 'Save Parameter';
+            if (btnDelete) btnDelete.classList.add('d-none');
+            if (recordId) recordId.value = '';
+        }
+
+        updateFormAction();
+    }
+
+    function activateRecordSet(entityKey) {
+        recordSets.forEach(function (set) {
+            set.classList.toggle('active', set.getAttribute('data-entity') === entityKey);
+        });
+    }
+
+    function activateEntity(entityKey) {
+        currentEntity = entityKey || 'project_type';
+
+        entityPills.forEach(function (pill) {
+            pill.classList.toggle('active', pill.getAttribute('data-entity') === currentEntity);
+        });
+
+        entityForms.forEach(function (section) {
+            section.classList.toggle('active', section.getAttribute('data-entity') === currentEntity);
+        });
+
+        activateRecordSet(currentEntity);
+
+        var meta = entityMeta[currentEntity] || entityMeta.project_type;
+        if (entityLabel)  entityLabel.textContent  = meta.label;
+        if (formTitle)    formTitle.textContent    = meta.title;
+        if (formSubtitle) formSubtitle.textContent = meta.subtitle;
+
+        if (recordSearch) recordSearch.value = '';
+
+        // Switching entity defaults to create mode
+        setMode('create');
+    }
+
+    entityPills.forEach(function (pill) {
+        pill.addEventListener('click', function () {
+            var entityKey = pill.getAttribute('data-entity');
+            hideAlert();
+            activateEntity(entityKey);
+        });
+    });
+
+    if (btnSwitchMode) {
+        btnSwitchMode.addEventListener('click', function () {
+            var currentMode = modeBadge ? (modeBadge.dataset.mode || 'create') : 'create';
+            var nextMode    = currentMode === 'create' ? 'edit' : 'create';
+            hideAlert();
+            setMode(nextMode);
+        });
+    }
+
+    function bindImagePreview(inputId, previewId) {
+        var input   = document.getElementById(inputId);
+        var preview = document.getElementById(previewId);
+        if (!input || !preview) return;
+
+        input.addEventListener('change', function () {
+            var file = input.files && input.files[0];
+            if (!file) return;
+
+            hideAlert();
+
+            var reader = new FileReader();
+            reader.onload = function (e) {
+                preview.innerHTML = '';
+                var img = document.createElement('img');
+                img.src = e.target.result;
+                img.alt = 'Preview';
+                preview.appendChild(img);
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    bindImagePreview('pt_image',   'pt_image_preview');
+    bindImagePreview('pst_image',  'pst_image_preview');
+    bindImagePreview('sp_image',   'sp_image_preview');
+    bindImagePreview('cat_image',  'cat_image_preview');
+    bindImagePreview('sub_image',  'sub_image_preview');
+    bindImagePreview('prod_image', 'prod_image_preview');
+
+    function setPreviewFromUrl(previewId, url, placeholderText) {
+        var preview = document.getElementById(previewId);
+        if (!preview) return;
+
+        preview.innerHTML = '';
+
+        if (url) {
+            var img = document.createElement('img');
+            img.src = url;
+            img.alt = 'Preview';
+            preview.appendChild(img);
+        } else if (placeholderText) {
+            var div = document.createElement('div');
+            div.className = 'ip-image-placeholder';
+            div.textContent = placeholderText;
+            preview.appendChild(div);
+        }
+    }
+
+    function clearFileInputs() {
+        ['pt_image','pst_image','sp_image','cat_image','sub_image','prod_image'].forEach(function (id) {
+            var f = document.getElementById(id);
+            if (f) f.value = '';
+        });
+    }
+
+    function hydrateFromRecord(btn) {
+        var entity = btn.getAttribute('data-entity');
+        var id     = btn.getAttribute('data-id') || '';
+
+        if (recordId) recordId.value = id || '';
+
+        setMode('edit');
+        hideAlert();
+        clearFileInputs();
+
+        if (entity === 'project_type') {
+            document.getElementById('pt_code').value        = btn.dataset.code || '';
+            document.getElementById('pt_name').value        = btn.dataset.name || '';
+            document.getElementById('pt_description').value = btn.dataset.description || '';
+            document.getElementById('pt_sort_order').value  = btn.dataset.sortOrder || '';
+            document.getElementById('pt_is_active').checked = btn.dataset.isActive !== '0';
+            setPreviewFromUrl('pt_image_preview', btn.dataset.imageUrl, 'No image selected.');
+        }
+
+        if (entity === 'project_subtype') {
+            document.getElementById('pst_code').value        = btn.dataset.code || '';
+            document.getElementById('pst_name').value        = btn.dataset.name || '';
+            document.getElementById('pst_description').value = btn.dataset.description || '';
+            document.getElementById('pst_sort_order').value  = btn.dataset.sortOrder || '';
+            document.getElementById('pst_is_active').checked = btn.dataset.isActive !== '0';
+
+            var pstType = document.getElementById('pst_project_type_id');
+            if (pstType && btn.dataset.projectTypeId) {
+                pstType.value = btn.dataset.projectTypeId;
+            }
+            setPreviewFromUrl('pst_image_preview', btn.dataset.imageUrl, 'No image selected.');
+        }
+
+        if (entity === 'space') {
+            document.getElementById('sp_code').value              = btn.dataset.code || '';
+            document.getElementById('sp_name').value              = btn.dataset.name || '';
+            document.getElementById('sp_description').value       = btn.dataset.description || '';
+            document.getElementById('sp_default_quantity').value  = btn.dataset.defaultQuantity || '';
+            document.getElementById('sp_default_area_sqft').value = btn.dataset.defaultAreaSqft || '';
+            document.getElementById('sp_sort_order').value        = btn.dataset.sortOrder || '';
+            document.getElementById('sp_is_active').checked       = btn.dataset.isActive !== '0';
+
+            var spSubtype = document.getElementById('sp_project_subtype_id');
+            if (spSubtype && btn.dataset.projectSubtypeId) {
+                spSubtype.value = btn.dataset.projectSubtypeId;
+            }
+            setPreviewFromUrl('sp_image_preview', btn.dataset.imageUrl, 'No image selected.');
+        }
+
+        if (entity === 'category') {
+            document.getElementById('cat_code').value        = btn.dataset.code || '';
+            document.getElementById('cat_name').value        = btn.dataset.name || '';
+            document.getElementById('cat_description').value = btn.dataset.description || '';
+            document.getElementById('cat_sort_order').value  = btn.dataset.sortOrder || '';
+            document.getElementById('cat_is_active').checked = btn.dataset.isActive !== '0';
+            setPreviewFromUrl('cat_image_preview', btn.dataset.imageUrl, 'No image selected.');
+        }
+
+        if (entity === 'subcategory') {
+            document.getElementById('sub_code').value        = btn.dataset.code || '';
+            document.getElementById('sub_name').value        = btn.dataset.name || '';
+            document.getElementById('sub_description').value = btn.dataset.description || '';
+            document.getElementById('sub_sort_order').value  = btn.dataset.sortOrder || '';
+            document.getElementById('sub_is_active').checked = btn.dataset.isActive !== '0';
+
+            var subCat = document.getElementById('sub_cat_id');
+            if (subCat && btn.dataset.categoryId) {
+                subCat.value = btn.dataset.categoryId;
+            }
+            setPreviewFromUrl('sub_image_preview', btn.dataset.imageUrl, 'No image selected.');
+        }
+
+        if (entity === 'product') {
+            document.getElementById('prod_sku').value              = btn.dataset.sku || '';
+            document.getElementById('prod_name').value             = btn.dataset.name || '';
+            document.getElementById('prod_short_description').value= btn.dataset.shortDescription || '';
+            document.getElementById('prod_spec').value             = btn.dataset.specification || '';
+            document.getElementById('prod_origin_country').value   = btn.dataset.originCountry || '';
+            document.getElementById('prod_default_qty').value      = btn.dataset.defaultQty || '';
+            document.getElementById('prod_sort_order').value       = btn.dataset.sortOrder || '';
+            document.getElementById('prod_is_active').checked      = btn.dataset.isActive !== '0';
+
+            var prodSub = document.getElementById('prod_subcategory_id');
+            if (prodSub && btn.dataset.subcategoryId) {
+                prodSub.value = btn.dataset.subcategoryId;
+            }
+            var prodTag = document.getElementById('prod_default_tag');
+            if (prodTag && btn.dataset.defaultTag) {
+                prodTag.value = btn.dataset.defaultTag;
+            }
+            setPreviewFromUrl('prod_image_preview', btn.dataset.imageUrl, 'No image selected.');
+        }
+
+        activateEntity(entity);
+        updateFormAction();
+    }
+
+    function wireRecordClicks() {
+        var items = document.querySelectorAll('.ip-record-item');
+        items.forEach(function (item) {
+            item.addEventListener('click', function () {
+                var parentSet = item.closest('.ip-record-set');
+                if (parentSet) {
+                    parentSet.querySelectorAll('.ip-record-item').forEach(function (it) {
+                        it.classList.toggle('active', it === item);
+                    });
+                }
+                hydrateFromRecord(item);
+            });
+        });
+    }
+
+    wireRecordClicks();
+
+    if (recordSearch) {
+        recordSearch.addEventListener('input', function () {
+            var term      = (this.value || '').toLowerCase();
+            var activeSet = document.querySelector('.ip-record-set.active');
+            if (!activeSet) return;
+            var items = activeSet.querySelectorAll('.ip-record-item');
+            items.forEach(function (item) {
+                var text = item.textContent || '';
+                item.style.display = text.toLowerCase().indexOf(term) !== -1 ? '' : 'none';
+            });
+        });
+    }
+
+    if (btnDelete) {
+        btnDelete.addEventListener('click', function () {
+            hideAlert();
+
+            if (!recordId || !recordId.value) {
+                showAlert('info', 'No record selected to delete.');
+                return;
+            }
+
+            var id = recordId.value;
+            if (!baseUrl || !currentEntity) {
+                showAlert('error', 'Unable to resolve delete URL.');
+                return;
+            }
+
+            var confirmed = window.confirm(
+                'Are you sure you want to delete this record?\nThis action cannot be undone.'
+            );
+
+            if (!confirmed) return;
+
+            var url = baseUrl + '/' + encodeURIComponent(currentEntity) + '/' + encodeURIComponent(id);
+
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ _method: 'DELETE' })
+            })
+            .then(function (res) { return res.json().catch(function () { return {}; }); })
+            .then(function (json) {
+                if (json && json.ok) {
+                    var activeSet = document.querySelector('.ip-record-set[data-entity="' + currentEntity + '"]');
+                    if (activeSet) {
+                        var btn = activeSet.querySelector('.ip-record-item[data-id="' + id + '"]');
+                        if (btn && btn.parentNode) {
+                            btn.parentNode.removeChild(btn);
+                        }
+                        if (!activeSet.querySelector('.ip-record-item')) {
+                            var emptyDiv = document.createElement('div');
+                            emptyDiv.className = 'ip-record-empty';
+                            emptyDiv.textContent = 'No records found.';
+                            activeSet.appendChild(emptyDiv);
+                        }
+                    }
+
+                    if (ipForm) {
+                        ipForm.reset();
+                    }
+                    if (recordId) recordId.value = '';
+                    setMode('create');
+                    showAlert('info', 'Record deleted successfully.');
+                } else {
+                    var msg = (json && json.message)
+                        ? json.message
+                        : 'Failed to delete record.';
+                    showAlert('error', msg);
+                }
+            })
+            .catch(function () {
+                showAlert('error', 'Failed to delete record.');
+            });
+        });
+    }
+
+    var btnClearForm = document.getElementById('btnClearForm');
+    if (btnClearForm && ipForm) {
+        btnClearForm.addEventListener('click', function () {
+            hideAlert();
+            clearFileInputs();
+            if (recordId && !recordId.value) {
+                setMode('create');
+            }
+        });
+    }
+
+    // Initial entity + mode
+    currentEntity = initialEntity || 'project_type';
+    activateEntity(currentEntity);
+    setMode(initialMode || 'create');
+    updateFormAction();
+})();
+</script>
+@endpush
